@@ -10,26 +10,26 @@ async function checkParticipant() {
     if (data.status === 'success') {
         // Store participant number in local storage for later use
         localStorage.setItem('participantNumber', participantNumber);
-        window.location.href = 'instructions';
+        window.location.href = '/RTT_instructions_1';
     } else {
         document.getElementById('message').innerText = data.message;
     }
 }
 
 function proceedToPractice() {
-    window.location.href = '/practice1';
+    window.location.href = '/RTT_practice_1';
 }
 
 function proceedToPractice2() {
-    window.location.href = '/practice2';
+    window.location.href = '/RTT_practice_2';
 }
 
 function proceedToPhase1() {
-    window.location.href = '/phase1';
+    window.location.href = '/RTT_phase_1';
 }
 
 function proceedToPhase2() {
-    window.location.href = '/phase2';
+    window.location.href = '/RTT_phase_2';
 }
 
 function finishExperiment() {
@@ -42,16 +42,16 @@ let startTime;
 
 document.addEventListener('DOMContentLoaded', (event) => {
     if (window.location.pathname.includes('practice1')) {
-        console.log("Starting Practice Phase 1");
+        console.log("Starting RTT Practice Phase 1");
         startPractice();
     } else if (window.location.pathname.includes('phase1')) {
-        console.log("Starting Phase 1");
+        console.log("Starting RTT Phase 1");
         startPhase1Trials();
     } else if (window.location.pathname.includes('practice2')) {
-        console.log("Starting Practice Phase 2");
+        console.log("Starting RTT Practice Phase 2");
         startPractice2();
     } else if (window.location.pathname.includes('phase2')) {
-        console.log("Starting Phase 2");
+        console.log("Starting RTT Phase 2");
         startPhase2Trials();
     }
 });

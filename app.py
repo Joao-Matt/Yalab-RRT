@@ -67,10 +67,13 @@ def check_participant():
 
     if participant_number in participants_df['Number'].values:
         print("Participant number found in the dataset.")
-        if participants_df[participants_df['Number'] ==
-                           participant_number]['Used'].values[0] == 0:
-            print("Participant number is valid and not used.")
-            return jsonify({"status": "success"})
+        if participants_df[participants_df['Number'] == participant_number][
+                'Singular RTT Used'].values[0] == 0:
+            if participants_df[
+                    participants_df['Number'] ==
+                    participant_number]['Multiple RTT Used'].values[0] == 0:
+                print("Participant number is valid and not used.")
+                return jsonify({"status": "success"})
         else:
             print("Participant number has already been used.")
             return jsonify({
