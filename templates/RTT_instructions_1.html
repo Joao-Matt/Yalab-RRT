@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructions</title>
+    <link rel="stylesheet" href="{{ url_for('serve_static', filename='RTT_style.css') }}">
+</head>
+
+<body>
+    <h1>Game Instructions</h1>
+    <p>Here are the instructions for the game...</p>
+    <button onclick="proceedToPractice()">Proceed to Practice</button>
+
+    <script src="{{ url_for('serve_static', filename='RTT_script.js') }}"></script>
+</body>
+
+</html>
