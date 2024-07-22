@@ -53,6 +53,7 @@ function startTrials(phase) {
     const maxTrials = phase === 'phase2' ? 16 : 4;
     const isPractice = window.location.pathname.includes('practice');
     let results = [];
+    let trialActive = false;
 
     function startNextTrial() {
         if (trials < maxTrials) {
@@ -62,12 +63,15 @@ function startTrials(phase) {
             localStorage.setItem(`${phase}Results`, JSON.stringify(results));
             const proceedButton = document.getElementById('proceedButton');
             const finishButton = document.getElementById('finishButton');
-            if (isPractice && proceedButton) {
+            if (isPractice && phase === 'phase1' && proceedButton) {
                 proceedButton.style.display = 'block';
-                document.getElementById('message').innerText = `Practice ${phase === 'phase2' ? 2 : 1} completed. Press "Proceed to ${phase === 'phase2' ? 'Phase 2' : 'Instructions 2'}" when you are ready.`;
+                document.getElementById('message').innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
             } else if (phase === 'phase1' && proceedButton) {
                 proceedButton.style.display = 'block';
                 document.getElementById('message').innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
+            } else if (isPractice && phase === 'phase2' && proceedButton) {
+                proceedButton.style.display = 'block';
+                document.getElementById('message').innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
             } else if (phase === 'phase2' && finishButton) {
                 finishButton.style.display = 'block';
                 document.getElementById('message').innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
@@ -87,6 +91,9 @@ function startTrials(phase) {
             squareId = `square${squareIndex}`;
         }
 
+        // Reset all squares to red
+        resetAllSquares();
+
         const square = document.getElementById(squareId);
         if (!square) {
             console.error(`Element with id "${squareId}" not found`);
@@ -97,6 +104,7 @@ function startTrials(phase) {
         square.classList.remove('red-square');
         square.classList.add('green-square');
         startTime = new Date().getTime();  // Record the start time
+        trialActive = true;
 
         // Add the appropriate key detection function
         const detectKeyFunction = window.location.pathname.includes('phase_2') || window.location.pathname.includes('practice_2') ? detectKey.bind(null, squareId) : detectSpacebar;
@@ -104,7 +112,7 @@ function startTrials(phase) {
     }
 
     function detectSpacebar(event) {
-        if (event.code === 'Space') {
+        if (event.code === 'Space' && trialActive) {
             handleReaction();
         }
     }
@@ -115,21 +123,44 @@ function startTrials(phase) {
             console.log(`Ignored key: ${event.key}`);
             return;
         }
-        handleReaction(squareId, event.key.toLowerCase());
+        if (trialActive) {
+            handleReaction(squareId, event.key.toLowerCase());
+        }
     }
 
     function handleReaction(squareId = 'square', pressedKey = 'space') {
         const reactionTime = new Date().getTime() - startTime;
         const isPractice = window.location.pathname.includes('practice');
+        const correct = checkCorrectKey(squareId, pressedKey);
 
         if (!isPractice) {
-            results.push({ round: trials + 1, squareId, pressedKey, reactionTime, correct: true });
+            results.push({ round: trials + 1, squareId, pressedKey, reactionTime, correct });
         }
-        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms`;
+        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
         trials++;
         resetSquare(squareId);
+        trialActive = false;
         document.removeEventListener('keydown', window.location.pathname.includes('phase_2') || window.location.pathname.includes('practice_2') ? detectKey.bind(null, squareId) : detectSpacebar);
-        setTimeout(startNextTrial, 2000);
+        setTimeout(() => {
+            if (trials < maxTrials) {
+                startNextTrial();
+            }
+        }, 2000);
+    }
+
+    function resetAllSquares() {
+        for (let i = 1; i <= 4; i++) {
+            const square = document.getElementById(`square${i}`);
+            if (square) {
+                square.classList.remove('green-square');
+                square.classList.add('red-square');
+            }
+        }
+        const square = document.getElementById('square');
+        if (square) {
+            square.classList.remove('green-square');
+            square.classList.add('red-square');
+        }
     }
 
     function resetSquare(squareId = 'square') {
@@ -140,6 +171,11 @@ function startTrials(phase) {
         }
         square.classList.remove('green-square');
         square.classList.add('red-square');
+    }
+
+    function checkCorrectKey(squareId, pressedKey) {
+        const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
+        return validKeys[squareId] === pressedKey;
     }
 
     startNextTrial();
