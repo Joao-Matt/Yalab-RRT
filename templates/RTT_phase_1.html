@@ -5,16 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phase 1</title>
-    <link rel="stylesheet" href="{{ url_for('serve_static', filename='RTT_style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='RTT_style.css') }}">
 </head>
 
 <body>
     <h1>Phase 1</h1>
     <div id="square" class="red-square"></div>
     <p id="message"></p>
-    <button id="proceedButton" style="display: none;" onclick="proceedToPractice2()">Proceed to Practice 2</button>
-
-    <script src="{{ url_for('serve_static', filename='RTT_script.js') }}"></script>
+    <button id="proceedButton" style="display:none;" onclick="proceedToPractice2()">Proceed to Practice 2</button>
+    <button id="retryButton" style="display:none;" onclick="retryPhase1()">Retry</button>
+    <script src="{{ url_for('static', filename='RTT_script.js') }}"></script>
 </body>
 
 </html>

@@ -41,16 +41,16 @@ const maxPracticeTrials = 4;
 let startTime;
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    if (window.location.pathname.includes('practice1')) {
+    if (window.location.pathname.includes('RTT_practice_1')) {
         console.log("Starting RTT Practice Phase 1");
         startPractice();
-    } else if (window.location.pathname.includes('phase1')) {
+    } else if (window.location.pathname.includes('RTT_phase_1')) {
         console.log("Starting RTT Phase 1");
         startPhase1Trials();
-    } else if (window.location.pathname.includes('practice2')) {
+    } else if (window.location.pathname.includes('RTT_practice_2')) {
         console.log("Starting RTT Practice Phase 2");
         startPractice2();
-    } else if (window.location.pathname.includes('phase2')) {
+    } else if (window.location.pathname.includes('RTT_phase_2')) {
         console.log("Starting RTT Phase 2");
         startPhase2Trials();
     }
@@ -73,6 +73,12 @@ function changeColor() {
 }
 
 function detectSpacebar(event) {
+    const currentPath = window.location.pathname;
+    if (currentPath.includes('RTT_practice_2') || currentPath.includes('RTT_phase_2')) {
+        console.log('Space bar press ignored in practice 2 or phase 2');
+        return; // Ignore space bar presses in practice 2 or phase 2
+    }
+
     if (event.code === 'Space') {
         const reactionTime = new Date().getTime() - startTime;
         document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms`;
@@ -128,12 +134,24 @@ function changePhase1Color() {
 function detectPhase1Spacebar(event) {
     if (event.code === 'Space') {
         const reactionTime = new Date().getTime() - phase1StartTime;
+        // if (reactionTime < 150) {
+        //     document.getElementById('message').innerText = `Reaction time too fast: ${reactionTime} ms. Press the retry button to try again.`;
+        //     document.getElementById('retryButton').style.display = 'block';
+        //     return;
+        // }
         phase1Results.push({ round: phase1Trials + 1, reactionTime: reactionTime });
         document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms`;
         phase1Trials++;
         resetPhase1Square();
         document.removeEventListener('keydown', detectPhase1Spacebar);
-        setTimeout(startPhase1Trials, 2000); // Wait 2 seconds before starting the next trial
+        if (phase1Trials < maxPhase1Trials) {
+            setTimeout(() => {
+                startPhase1Trials();
+            }, 2000); // Wait 2 seconds before starting the next trial
+        } else {
+            document.getElementById('proceedButton').style.display = 'block';
+            document.getElementById('message').innerText = 'Phase 1 completed. Press "Proceed to Practice 2" when you are ready.';
+        }
     }
 }
 
@@ -172,7 +190,14 @@ function changePractice2Color() {
 
 function detectPractice2Key(squareIndex, event) {
     const validKeys = { 1: 'a', 2: 's', 3: 'k', 4: 'l' };
-    const pressedKey = event.key;
+    const pressedKey = event.key.toLowerCase(); // Ensure the pressed key is lowercase
+
+    // Check if the pressed key is in validKeys
+    if (!Object.values(validKeys).includes(pressedKey)) {
+        console.log(`Ignored key: ${pressedKey}`);
+        return; // Ignore invalid key presses
+    }
+
     const reactionTime = new Date().getTime() - practice2StartTime;
     const isCorrect = validKeys[squareIndex] === pressedKey;
 
@@ -207,6 +232,7 @@ let phase2StartTime;
 let phase2Results = [];
 
 function changePhase2Color() {
+    resetPhase2Square(); // Ensure all squares are reset before changing color
     const squareIndex = getRandomInt(1, 4);
     const square = document.getElementById(`square${squareIndex}`);
     square.classList.remove('red-square');
@@ -231,7 +257,7 @@ function startPhase2Trials() {
 // Detecting what key you pressed in case it's a wrong answer
 function detectPhase2KeyPress(event) {
     const validKeys = { 1: 'a', 2: 's', 3: 'k', 4: 'l' };
-    const pressedKey = event.key;
+    const pressedKey = event.key.toLowerCase(); // Ensure the pressed key is lowercase
 
     let isGreenSquareVisible = false;
     let squareIndex = null;
@@ -266,7 +292,13 @@ function detectPhase2KeyPress(event) {
 
 function detectPhase2Key(squareIndex, event) {
     const validKeys = { 1: 'a', 2: 's', 3: 'k', 4: 'l' };
-    const pressedKey = event.key;
+    const pressedKey = event.key.toLowerCase(); // Ensure the pressed key is lowercase
+
+    // Check if the pressed key is in validKeys
+    if (!Object.values(validKeys).includes(pressedKey)) {
+        console.log(`Ignored key: ${pressedKey}`);
+        return; // Ignore invalid key presses
+    }
 
     const reactionTime = new Date().getTime() - phase2StartTime;
     const isCorrect = validKeys[squareIndex] === pressedKey;
@@ -290,9 +322,11 @@ function detectPhase2Key(squareIndex, event) {
 }
 
 function resetPhase2Square(squareIndex) {
-    const square = document.getElementById(`square${squareIndex}`);
-    square.classList.remove('green-square');
-    square.classList.add('red-square');
+    for (let i = 1; i <= 4; i++) {
+        const square = document.getElementById(`square${i}`);
+        square.classList.remove('green-square');
+        square.classList.add('red-square');
+    }
 }
 
 function saveResults() {
