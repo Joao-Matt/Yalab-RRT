@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import pandas as pd
 from flask_cors import CORS
 import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Create Flask app with custom static and template folders
 app = Flask(
@@ -88,27 +90,53 @@ def check_participant():
         })
 
 
+scopes = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]
+credentials = ServiceAccountCredentials.from_json_keyfile_name(
+    'static/yalab-rrt-key.json', scopes)
+client = gspread.authorize(credentials)
+workbookSingular = client.open('Singular RTT')
+workbookMultiple = client.open('Multiple RTT')
+sheetSingular = workbookSingular.worksheet('Sheet1')
+sheetMultiple = workbookMultiple.worksheet('Sheet1')
+
+
 @app.route('/save-results', methods=['POST'])
 def save_results():
+
     data = request.json
     participant_number = str(data.get('participantNumber')).strip()
     phase1_results = data.get('phase1Results')
     phase2_results = data.get('phase2Results')
 
-    # Save Phase 1 results to CSV
-    filename = f'{participant_number}_phase1.csv'
-    phase1_df = pd.DataFrame(phase1_results)
-    phase1_df.to_csv(filename, index=False)
+    sheetSingular.update()
 
-    # Save Phase 2 results to CSV if they exist
-    if phase2_results:
-        filename = f'{participant_number}_phase2.csv'
-        phase2_df = pd.DataFrame(phase2_results)
-        phase2_df.to_csv(filename, index=False)
+    # Function to append Phase 1 results to "Singular RTT"
+    def append_phase1_results_to_sheet(phase1_results, participant_number):
+        for result in phase1_results:
+            row = [participant_number, result['round'], result['reactionTime']]
+            sheetSingular.append_row(row)
+
+    # Function to append Phase 2 results to "Multiple RTT"
+    def append_phase2_results_to_sheet(phase2_results, participant_number):
+        for result in phase2_results:
+            row = [
+                participant_number, result['round'], result['squareId'],
+                result['pressedKey'], result['reactionTime'], result['correct']
+            ]
+            sheetMultiple.append_row(row)
+
+    # Append results to the respective sheets
+    append_phase1_results_to_sheet(phase1_results, participant_number)
+    append_phase2_results_to_sheet(phase2_results, participant_number)
 
     # Mark the participant number as used
     participants_df.loc[participants_df['Number'] == participant_number,
-                        'Used'] = 1
+                        'Singular RTT Used'] = 1
+    participants_df.loc[participants_df['Number'] == participant_number,
+                        'Multiple RTT Used'] = 1
     participants_df.to_excel(excel_path, index=False)
     print(
         f"Participant number {participant_number} marked as used and results saved."
