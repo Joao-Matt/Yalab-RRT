@@ -1,3 +1,12 @@
+let trials = 0;
+let maxTrials = 0;
+let participantNumber = 0;
+let resultsSingular = [];
+let resultsMultiple = [];
+let startTime;
+let trialActive = false;
+let isPractice = false;
+
 async function checkParticipant() {
     const participantNumber = document.getElementById('participantNumber').value;
     const response = await fetch('/check-participant', {
