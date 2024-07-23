@@ -85,13 +85,12 @@ function startTrials(phase) {
         let squareId;
 
         if (window.location.pathname.includes('RTT_phase_1') || window.location.pathname.includes('RTT_practice_1')) {
-            squareId = 'square';  // For Phase 1 and Practice 1, use a single square
-        } else if (window.location.pathname.includes('RTT_phase_2') || window.location.pathname.includes('RTT_practice_2')) {
-            const squareIndex = getRandomInt(1, 4);  // For Phase 2 and Practice 2, use a random square index
+            squareId = 'square';
+        } else {
+            const squareIndex = getRandomInt(1, 4);
             squareId = `square${squareIndex}`;
         }
 
-        // Reset all squares to red
         resetAllSquares();
 
         const square = document.getElementById(squareId);
@@ -100,52 +99,98 @@ function startTrials(phase) {
             return;
         }
 
-        // Change the color of the square from red to green
         square.classList.remove('red-square');
         square.classList.add('green-square');
-        startTime = new Date().getTime();  // Record the start time
+        startTime = new Date().getTime();
         trialActive = true;
 
-        // Add the appropriate key detection function
-        const detectKeyFunction = window.location.pathname.includes('phase_2') || window.location.pathname.includes('practice_2') ? detectKey.bind(null, squareId) : detectSpacebar;
-        document.addEventListener('keydown', detectKeyFunction);
+        document.addEventListener('keydown', detectKeyPress);
     }
 
-    function detectSpacebar(event) {
-        if (event.code === 'Space' && trialActive) {
-            handleReaction();
+    function detectKeyPress(event) {
+        if (window.location.pathname.includes('RTT_phase_1') || window.location.pathname.includes('RTT_practice_1')) {
+            if (event.code === 'Space') {
+                trialActive ? handleReaction() : handleInactiveTrial();
+            }
+        } else {
+            const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
+            if (Object.values(validKeys).includes(event.key.toLowerCase())) {
+                const squareId = Object.keys(validKeys).find(key => validKeys[key] === event.key.toLowerCase());
+                trialActive ? handleReaction(squareId, event.key.toLowerCase()) : handleInactiveTrial(squareId, event.key.toLowerCase());
+            }
         }
-    }
-
-    function detectKey(squareId, event) {
-        const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
-        if (!Object.values(validKeys).includes(event.key.toLowerCase())) {
-            console.log(`Ignored key: ${event.key}`);
-            return;
-        }
-        if (trialActive) {
-            handleReaction(squareId, event.key.toLowerCase());
-        }
-    }
 
     function handleReaction(squareId = 'square', pressedKey = 'space') {
         const reactionTime = new Date().getTime() - startTime;
-        const isPractice = window.location.pathname.includes('practice');
         const correct = checkCorrectKey(squareId, pressedKey);
 
         if (!isPractice) {
-            results.push({ round: trials + 1, squareId, pressedKey, reactionTime, correct });
+            if (window.location.pathname.includes('RTT_phase_1')) {
+                resultsSingular.push({ participantNumber, round: trials + 1, reactionTime });
+            } else {
+                resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, correct });
+            }
         }
+
         document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
         trials++;
         resetSquare(squareId);
         trialActive = false;
-        document.removeEventListener('keydown', window.location.pathname.includes('phase_2') || window.location.pathname.includes('practice_2') ? detectKey.bind(null, squareId) : detectSpacebar);
+        document.removeEventListener('keydown', detectKeyPress);
+
         setTimeout(() => {
             if (trials < maxTrials) {
                 startNextTrial();
             }
         }, 2000);
+    }
+    
+    function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
+        const reactionTime = 0;
+        const correct = false;
+
+        if (!isPractice) {
+            if (window.location.pathname.includes('RTT_phase_1')) {
+                resultsSingular.push({ participantNumber, round: trials + 1, reactionTime });
+            } else {
+                resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, correct });
+            }
+        }
+
+        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, Wrong`;
+        trials++;
+        resetSquare(squareId);
+
+        setTimeout(() => {
+            if (trials < maxTrials) {
+                startNextTrial();
+            }
+        }, 2000);
+    }
+
+    function handleTrialCompletion() {
+        localStorage.setItem('phase1Results', JSON.stringify(resultsSingular));
+        localStorage.setItem('phase2Results', JSON.stringify(resultsMultiple));
+        const proceedButton = document.getElementById('proceedButton');
+        const finishButton = document.getElementById('finishButton');
+
+        if (isPractice) {
+            if (window.location.pathname.includes('RTT_phase_1')) {
+                proceedButton.style.display = 'block';
+                document.getElementById('message').innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
+            } else {
+                proceedButton.style.display = 'block';
+                document.getElementById('message').innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
+            }
+        } else {
+            if (window.location.pathname.includes('RTT_phase_1')) {
+                proceedButton.style.display = 'block';
+                document.getElementById('message').innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
+            } else {
+                finishButton.style.display = 'block';
+                document.getElementById('message').innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
+            }
+        }
     }
 
     function resetAllSquares() {
@@ -178,32 +223,29 @@ function startTrials(phase) {
         return validKeys[squareId] === pressedKey;
     }
 
-    startNextTrial();
-}
-
-function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
 
 function saveResults() {
-    const participantNumber = localStorage.getItem('participantNumber');
-    const phase1Results = JSON.parse(localStorage.getItem('phase1Results')) || [];
-    const phase2Results = JSON.parse(localStorage.getItem('phase2Results')) || [];
+        const participantNumber = localStorage.getItem('participantNumber');
+        const phase1Results = JSON.parse(localStorage.getItem('phase1Results')) || [];
+        const phase2Results = JSON.parse(localStorage.getItem('phase2Results')) || [];
 
-    fetch('/save-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            participantNumber: participantNumber,
-            phase1Results: phase1Results,
-            phase2Results: phase2Results
-        })
-    }).then(response => response.json())
-      .then(data => {
-        if (data.status === 'success') {
-            window.location.href = '/success';
-        } else {
-            console.error('Failed to save results');
-        }
-    });
-}
+        fetch('/save-results', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                participantNumber: participantNumber,
+                phase1Results: phase1Results,
+                phase2Results: phase2Results
+            })
+        }).then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = '/success';
+                } else {
+                    console.error('Failed to save results');
+                }
+            });
+    }
