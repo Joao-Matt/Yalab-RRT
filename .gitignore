@@ -162,4 +162,4 @@ cython_debug/
 #.idea/
 
 #json key
-yalab-rrt-key.json
+static/yalab-rrt-key.json
