@@ -2,8 +2,9 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import pandas as pd
 from flask_cors import CORS
 import os
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import subprocess
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
 
 # Create Flask app with custom static and template folders
 app = Flask(
@@ -12,14 +13,61 @@ app = Flask(
     template_folder='templates')  # Path to templates
 CORS(app)
 
-# Load participants data
-excel_path = 'static/participants.xlsx'
-participants_df = pd.read_excel(excel_path)
-participants_df['Number'] = participants_df['Number'].astype(str)
-print("Loaded participants data:")
+# Google Sheets setup
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SERVICE_ACCOUNT_FILE = "static/yalab-rrt-key.json"
+YalabSheet = "1D1QtUybvMkhjZtjznKycikO9d4qZxg-GqspQ0EQ2y9E"
+
+creds = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+service = build("sheets", "v4", credentials=creds)
+sheet = service.spreadsheets()
+
+
+# Load participants data from Google Sheets
+def load_participants_from_sheet():
+    result = sheet.values().get(spreadsheetId=YalabSheet,
+                                range='participants!A:D').execute()
+    values = result.get('values', [])
+    participants_df = pd.DataFrame(values[1:], columns=values[0])
+    participants_df['Number'] = participants_df['Number'].astype(str)
+    participants_df['Singular RTT Used'] = participants_df[
+        'Singular RTT Used'].astype(int)
+    participants_df['Multiple RTT Used'] = participants_df[
+        'Multiple RTT Used'].astype(int)
+    return participants_df
+
+
+participants_df = load_participants_from_sheet()
+print("Loaded participants data from Google Sheets:")
 print(participants_df)
 
+def append_to_singular_rtt(data):
+    body = {
+        'values': data
+    }
+    result = sheet.values().append(
+        spreadsheetId=YalabSheet,
+        range='Singular_RTT!A1',
+        valueInputOption='RAW',
+        insertDataOption='INSERT_ROWS',
+        body=body
+    ).execute()
+    return result
 
+def append_to_multiple_rtt(data):
+    body = {
+        'values': data
+    }
+    result = sheet.values().append(
+        spreadsheetId=YalabSheet,
+        range='Multiple_RTT!A1',
+        valueInputOption='RAW',
+        insertDataOption='INSERT_ROWS',
+        body=body
+    ).execute()
+    return result
+    
 @app.route('/')
 def index():
     return render_template('RTT_index.html')  # Serve the main HTML file
@@ -61,21 +109,20 @@ def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
 
 
-@app.route('/check-participant', methods=['POST'])
-def check_participant():
+@app.route('/RTT-check-participant', methods=['POST'])
+def RTT_check_participant():
     data = request.json
     participant_number = data.get('participantNumber')
     print(f"Received participant number: {participant_number}")
 
     if participant_number in participants_df['Number'].values:
         print("Participant number found in the dataset.")
-        if participants_df[participants_df['Number'] == participant_number][
-                'Singular RTT Used'].values[0] == 0:
-            if participants_df[
-                    participants_df['Number'] ==
-                    participant_number]['Multiple RTT Used'].values[0] == 0:
-                print("Participant number is valid and not used.")
-                return jsonify({"status": "success"})
+        participant = participants_df[participants_df['Number'] ==
+                                      participant_number].iloc[0]
+        if participant['Singular RTT Used'] == 0 and participant[
+                'Multiple RTT Used'] == 0:
+            print("Participant number is valid and not used.")
+            return jsonify({"status": "success"})
         else:
             print("Participant number has already been used.")
             return jsonify({
@@ -90,59 +137,49 @@ def check_participant():
         })
 
 
-scopes = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive'
-]
-credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    'static/yalab-rrt-key.json', scopes)
-client = gspread.authorize(credentials)
-workbookSingular = client.open('Singular RTT')
-workbookMultiple = client.open('Multiple RTT')
-sheetSingular = workbookSingular.worksheet('Sheet1')
-sheetMultiple = workbookMultiple.worksheet('Sheet1')
-
-
-@app.route('/save-results', methods=['POST'])
-def save_results():
-
+@app.route('/RTT-save-results', methods=['POST'])
+def RTT_save_results():
     data = request.json
     participant_number = str(data.get('participantNumber')).strip()
-    phase1_results = data.get('phase1Results')
-    phase2_results = data.get('phase2Results')
+    phase1_results = data.get('phase1Results') or []
+    phase2_results = data.get('phase2Results') or []
 
-    sheetSingular.update()
-
-    # Function to append Phase 1 results to "Singular RTT"
-    def append_phase1_results_to_sheet(phase1_results, participant_number):
-        for result in phase1_results:
-            row = [participant_number, result['round'], result['reactionTime']]
-            sheetSingular.append_row(row)
-
-    # Function to append Phase 2 results to "Multiple RTT"
-    def append_phase2_results_to_sheet(phase2_results, participant_number):
-        for result in phase2_results:
-            row = [
-                participant_number, result['round'], result['squareId'],
-                result['pressedKey'], result['reactionTime'], result['correct']
-            ]
-            sheetMultiple.append_row(row)
+    # Prepare data for appending
+    singular_data = [[participant_number, r['round'], r['reactionTime']] for r in phase1_results]
+    multiple_data = [[participant_number, r['round'], r['squareId'], r['pressedKey'], r['reactionTime'], r['correct']] for r in phase2_results]
 
     # Append results to the respective sheets
-    append_phase1_results_to_sheet(phase1_results, participant_number)
-    append_phase2_results_to_sheet(phase2_results, participant_number)
+    if singular_data:
+        append_to_singular_rtt(singular_data)
+    if multiple_data:
+        append_to_multiple_rtt(multiple_data)
 
-    # Mark the participant number as used
+    # Mark the participant number as used in the Google Sheet
+    update_participant_usage(participant_number)
+
+    print(f"Participant number {participant_number} marked as used and results saved.")
+    return jsonify({"status": "success"})
+
+
+def update_participant_usage(participant_number):
+    global participants_df
+    participant_index = participants_df[participants_df['Number'] == participant_number].index[0] + 2  # Google Sheets index starts at 1 and there's a header row
+    sheet.values().update(spreadsheetId=YalabSheet,
+                          range=f'participants!C{participant_index}',
+                          valueInputOption='RAW',
+                          body={
+                              'values': [['1']]
+                          }).execute()
+    sheet.values().update(spreadsheetId=YalabSheet,
+                          range=f'participants!D{participant_index}',
+                          valueInputOption='RAW',
+                          body={
+                              'values': [['1']]
+                          }).execute()
     participants_df.loc[participants_df['Number'] == participant_number,
                         'Singular RTT Used'] = 1
     participants_df.loc[participants_df['Number'] == participant_number,
                         'Multiple RTT Used'] = 1
-    participants_df.to_excel(excel_path, index=False)
-    print(
-        f"Participant number {participant_number} marked as used and results saved."
-    )
-
-    return jsonify({"status": "success"})
 
 
 if __name__ == '__main__':
