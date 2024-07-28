@@ -2,7 +2,8 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import pandas as pd
 from flask_cors import CORS
 import os
-import subprocess
+import json
+import base64
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
@@ -13,14 +14,25 @@ app = Flask(
     template_folder='templates')  # Path to templates
 CORS(app)
 
-# Google Sheets setup
+# Get the base64 encoded credentials from the environment variable
+credentials_base64 = os.getenv('GOOGLE_CREDENTIALS_BASE64')
+if not credentials_base64:
+    raise ValueError("No GOOGLE_CREDENTIALS_BASE64 environment variable set")
+# Decode the base64 string
+credentials_json = base64.b64decode(credentials_base64).decode('utf-8')
+# Load the JSON data
+credentials_info = json.loads(credentials_json)
+# Create credentials object
+credentials = service_account.Credentials.from_service_account_info(
+    credentials_info)
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_FILE = "static/yalab-rrt-key.json"
+credentials = credentials.with_scopes(SCOPES)
+# The ID and range of a sample spreadsheet.
 YalabSheet = "1D1QtUybvMkhjZtjznKycikO9d4qZxg-GqspQ0EQ2y9E"
-
-creds = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-service = build("sheets", "v4", credentials=creds)
+service = build("sheets", "v4", credentials=credentials)
+# Build the service
+service = build('sheets', 'v4', credentials=credentials)
+# Call the Sheets API
 sheet = service.spreadsheets()
 
 
@@ -163,15 +175,20 @@ def RTT_save_results():
 
 def update_participant_usage(participant_number):
     global participants_df
-    participant_index = participants_df[participants_df['Number'] == participant_number].index[0] + 2  # Google Sheets index starts at 1 and there's a header row
+    participant_index = participants_df[participants_df['Number'] == participant_number].index
+    if len(participant_index) > 0:
+        new_index = int(participant_index[0]) + 2 # Google Sheets index starts at 1 and there's a header row
+    else:
+        print("no new index")
+        new_index = 2
     sheet.values().update(spreadsheetId=YalabSheet,
-                          range=f'participants!C{participant_index}',
+                          range=f'participants!C{new_index}',
                           valueInputOption='RAW',
                           body={
                               'values': [['1']]
                           }).execute()
     sheet.values().update(spreadsheetId=YalabSheet,
-                          range=f'participants!D{participant_index}',
+                          range=f'participants!D{new_index}',
                           valueInputOption='RAW',
                           body={
                               'values': [['1']]
