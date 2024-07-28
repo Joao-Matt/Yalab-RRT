@@ -1,6 +1,6 @@
 let trials = 0;
 let maxTrials = 0;
-let practiceMaxTrials = 2;
+const practiceMaxTrials = 2;
 let participantNumber = 0;
 let resultsSingular = [];
 let resultsMultiple = [];
@@ -51,40 +51,33 @@ function finishExperiment() {
     });
 }
 
+document.addEventListener('DOMContentLoaded', (event) => {
+    const currentPath = window.location.pathname;
+    if (currentPath.includes('RTT_practice_1') || currentPath.includes('RTT_phase_1')) {
+        startTrials('phase1');
+    } else if (currentPath.includes('RTT_practice_2') || currentPath.includes('RTT_phase_2')) {
+        startTrials('phase2');
+    }
+});
+
 function startTrials(phase) {
     trials = 0; // Reset trials for each phase
     isPractice = window.location.pathname.includes('practice');
     maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? 16 : 4);
     trialActive = false;
 
-    function startNextTrial() {
-        if (trials < maxTrials) {
-            console.log(`Starting ${phase} trial ${trials + 1}`);
-            setTimeout(changeColor, getRandomInt(3000, 5000));
-        } else {
-            localStorage.setItem(`${phase}Results`, JSON.stringify(isPractice ? resultsSingular : resultsMultiple));
-            const proceedButton = document.getElementById('proceedButton');
-            const finishButton = document.getElementById('finishButton');
-            if (isPractice && phase === 'phase1' && proceedButton) {
-                proceedButton.style.display = 'block';
-                document.getElementById('message').innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
-            } else if (phase === 'phase1' && proceedButton) {
-                proceedButton.style.display = 'block';
-                document.getElementById('message').innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
-            } else if (isPractice && phase === 'phase2' && proceedButton) {
-                proceedButton.style.display = 'block';
-                document.getElementById('message').innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
-            } else if (phase === 'phase2' && finishButton) {
-                finishButton.style.display = 'block';
-                document.getElementById('message').innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
-            } else {
-                console.error('Proceed or Finish button not found');
-            }
-        }
-    }
-
     startNextTrial(); // Start the first trial
 }
+
+function startNextTrial() {
+    if (trials < maxTrials) {
+        console.log(`Starting trial ${trials + 1}`);
+        setTimeout(changeColor, getRandomInt(3000, 5000));
+    } else {
+        endTrials();
+    }
+}
+
 function changeColor() {
     console.log('changeColor function called'); // Debugging log
     let squareId;
@@ -127,7 +120,6 @@ function detectKeyPress(event) {
                 handleReaction(squareId, event.key.toLowerCase());
             } else {
                 handleInactiveTrial(squareId, event.key.toLowerCase());
-                // Ensure the square is reset correctly
                 resetSquare(squareId);
             }
         }
@@ -152,9 +144,7 @@ function handleReaction(squareId = 'square', pressedKey = 'space') {
     trialActive = false;
     document.removeEventListener('keydown', detectKeyPress);
 
-    setTimeout(() => {
-        startNextTrial();
-    }, 2000);
+    setTimeout(startNextTrial, 2000);
 }
 
 function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
@@ -170,13 +160,32 @@ function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
     }
 
     document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, Wrong`;
-    trials++; // Ensure this is incremented
-    trialActive = false; // Ensure the trial is marked as inactive
+    trials++;
+    trialActive = false;
     document.removeEventListener('keydown', detectKeyPress);
 
-    setTimeout(() => {
-        startNextTrial();
-    }, 2000);
+    setTimeout(startNextTrial, 2000);
+}
+
+function endTrials() {
+    localStorage.setItem(`${phase}Results`, JSON.stringify(isPractice ? resultsSingular : resultsMultiple));
+    const proceedButton = document.getElementById('proceedButton');
+    const finishButton = document.getElementById('finishButton');
+    if (isPractice && phase === 'phase1' && proceedButton) {
+        proceedButton.style.display = 'block';
+        document.getElementById('message').innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
+    } else if (phase === 'phase1' && proceedButton) {
+        proceedButton.style.display = 'block';
+        document.getElementById('message').innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
+    } else if (isPractice && phase === 'phase2' && proceedButton) {
+        proceedButton.style.display = 'block';
+        document.getElementById('message').innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
+    } else if (phase === 'phase2' && finishButton) {
+        finishButton.style.display = 'block';
+        document.getElementById('message').innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
+    } else {
+        console.error('Proceed or Finish button not found');
+    }
 }
 
 function resetAllSquares() {
