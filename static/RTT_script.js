@@ -1,16 +1,18 @@
 let trials = 0;
 let maxTrials = 0;
 const practiceMaxTrials = 2;
+let phase = 'phase1';
 let participantNumber = 0;
 let resultsSingular = [];
 let resultsMultiple = [];
 let startTime;
+let preActivationTime;
 let trialActive = false;
 let isPractice = false;
 
 async function checkParticipant() {
     const participantNumber = document.getElementById('participantNumber').value;
-    const response = await fetch('/check-participant', {
+    const response = await fetch('/RTT-check-participant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ participantNumber: participantNumber })
@@ -26,18 +28,25 @@ async function checkParticipant() {
 }
 
 function proceedToPractice1() {
+    isPractice = true;
     window.location.href = '/RTT_practice_1';
+    console.log(`Practice set to ${isPractice}`)
 }
 
 function proceedToPractice2() {
+    phase = 'phase2'
+    isPratice = true;
     window.location.href = '/RTT_practice_2';
 }
 
 function proceedToPhase1() {
+    isPractice = false;
     window.location.href = '/RTT_phase_1';
 }
 
 function proceedToPhase2() {
+    phase = 'phase2'
+    isPractice = false;
     window.location.href = '/RTT_phase_2';
 }
 
@@ -54,16 +63,17 @@ function finishExperiment() {
 document.addEventListener('DOMContentLoaded', (event) => {
     const currentPath = window.location.pathname;
     if (currentPath.includes('RTT_practice_1') || currentPath.includes('RTT_phase_1')) {
-        startTrials('phase1');
+        phase = 'phase1';
+        startTrials();
     } else if (currentPath.includes('RTT_practice_2') || currentPath.includes('RTT_phase_2')) {
-        startTrials('phase2');
+        phase = 'phase2';
+        startTrials();
     }
 });
 
-function startTrials(phase) {
+function startTrials() {
     trials = 0; // Reset trials for each phase
-    isPractice = window.location.pathname.includes('practice');
-    maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? 16 : 4);
+    maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? 6 : 4);
     trialActive = false;
 
     startNextTrial(); // Start the first trial
@@ -72,6 +82,8 @@ function startTrials(phase) {
 function startNextTrial() {
     if (trials < maxTrials) {
         console.log(`Starting trial ${trials + 1}`);
+        preActivationTime = new Date().getTime(); // Start the pre-activation timer
+        document.addEventListener('keydown', detectKeyPress);
         setTimeout(changeColor, getRandomInt(3000, 5000));
     } else {
         endTrials();
@@ -82,7 +94,7 @@ function changeColor() {
     console.log('changeColor function called'); // Debugging log
     let squareId;
 
-    if (window.location.pathname.includes('RTT_phase_1') || window.location.pathname.includes('RTT_practice_1')) {
+    if (phase === 'phase1') {
         squareId = 'square';
     } else {
         const squareIndex = getRandomInt(1, 4);
@@ -102,15 +114,20 @@ function changeColor() {
     square.classList.add('green-square');
     startTime = new Date().getTime();
     trialActive = true;
+    preActivationTime = null; // Reset the pre-activation timer
 
     console.log('Square color changed to green'); // Debugging log
-    document.addEventListener('keydown', detectKeyPress);
 }
 
 function detectKeyPress(event) {
-    if (window.location.pathname.includes('RTT_phase_1') || window.location.pathname.includes('RTT_practice_1')) {
+    if (phase === 'phase1') {
         if (event.code === 'Space') {
-            trialActive ? handleReaction() : handleInactiveTrial();
+            if (trialActive) {
+                handleReaction();
+            } else {
+                handleInactiveTrial();
+                trials++;
+            }
         }
     } else {
         const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
@@ -121,6 +138,7 @@ function detectKeyPress(event) {
             } else {
                 handleInactiveTrial(squareId, event.key.toLowerCase());
                 resetSquare(squareId);
+                trials++;
             }
         }
     }
@@ -131,10 +149,10 @@ function handleReaction(squareId = 'square', pressedKey = 'space') {
     const correct = checkCorrectKey(squareId, pressedKey);
 
     if (!isPractice) {
-        if (window.location.pathname.includes('RTT_phase_1')) {
-            resultsSingular.push({ participantNumber, round: trials + 1, reactionTime });
+        if (phase === 'phase1') {
+            resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
         } else {
-            resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, correct });
+            resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
         }
     }
 
@@ -147,15 +165,16 @@ function handleReaction(squareId = 'square', pressedKey = 'space') {
     setTimeout(startNextTrial, 2000);
 }
 
+
 function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
-    const reactionTime = 0;
+    const reactionTime = new Date().getTime() - preActivationTime; // Pre-activation duration as reaction time
     const correct = false;
 
     if (!isPractice) {
-        if (window.location.pathname.includes('RTT_phase_1')) {
-            resultsSingular.push({ participantNumber, round: trials + 1, reactionTime });
+        if (phase === 'phase1') {
+            resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
         } else {
-            resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, correct });
+            resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
         }
     }
 
@@ -167,26 +186,31 @@ function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
     setTimeout(startNextTrial, 2000);
 }
 
+
+
 function endTrials() {
     localStorage.setItem(`${phase}Results`, JSON.stringify(isPractice ? resultsSingular : resultsMultiple));
     const proceedButton = document.getElementById('proceedButton');
     const finishButton = document.getElementById('finishButton');
+    const messageElement = document.getElementById('message');
+
     if (isPractice && phase === 'phase1' && proceedButton) {
         proceedButton.style.display = 'block';
-        document.getElementById('message').innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
+        messageElement.innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
     } else if (phase === 'phase1' && proceedButton) {
         proceedButton.style.display = 'block';
-        document.getElementById('message').innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
+        messageElement.innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
     } else if (isPractice && phase === 'phase2' && proceedButton) {
         proceedButton.style.display = 'block';
-        document.getElementById('message').innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
+        messageElement.innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
     } else if (phase === 'phase2' && finishButton) {
         finishButton.style.display = 'block';
-        document.getElementById('message').innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
+        messageElement.innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
     } else {
         console.error('Proceed or Finish button not found');
     }
 }
+
 
 function resetAllSquares() {
     for (let i = 1; i <= 4; i++) {
@@ -258,3 +282,5 @@ async function markExperimentAsFinished() {
         console.error('Failed to finish experiment');
     }
 }
+
+

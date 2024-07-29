@@ -54,32 +54,27 @@ participants_df = load_participants_from_sheet()
 print("Loaded participants data from Google Sheets:")
 print(participants_df)
 
+
 def append_to_singular_rtt(data):
-    body = {
-        'values': data
-    }
-    result = sheet.values().append(
-        spreadsheetId=YalabSheet,
-        range='Singular_RTT!A1',
-        valueInputOption='RAW',
-        insertDataOption='INSERT_ROWS',
-        body=body
-    ).execute()
+    body = {'values': data}
+    result = sheet.values().append(spreadsheetId=YalabSheet,
+                                   range='Singular_RTT!A1',
+                                   valueInputOption='RAW',
+                                   insertDataOption='INSERT_ROWS',
+                                   body=body).execute()
     return result
 
+
 def append_to_multiple_rtt(data):
-    body = {
-        'values': data
-    }
-    result = sheet.values().append(
-        spreadsheetId=YalabSheet,
-        range='Multiple_RTT!A1',
-        valueInputOption='RAW',
-        insertDataOption='INSERT_ROWS',
-        body=body
-    ).execute()
+    body = {'values': data}
+    result = sheet.values().append(spreadsheetId=YalabSheet,
+                                   range='Multiple_RTT!A1',
+                                   valueInputOption='RAW',
+                                   insertDataOption='INSERT_ROWS',
+                                   body=body).execute()
     return result
-    
+
+
 @app.route('/')
 def index():
     return render_template('RTT_index.html')  # Serve the main HTML file
@@ -157,8 +152,13 @@ def RTT_save_results():
     phase2_results = data.get('phase2Results') or []
 
     # Prepare data for appending
-    singular_data = [[participant_number, r['round'], r['reactionTime']] for r in phase1_results]
-    multiple_data = [[participant_number, r['round'], r['squareId'], r['pressedKey'], r['reactionTime'], r['correct']] for r in phase2_results]
+    singular_data = [[
+        participant_number, r['round'], r['reactionTime'], r['GreenOnScreen']
+    ] for r in phase1_results]
+    multiple_data = [[
+        participant_number, r['round'], r['squareIndex'], r['pressedSquare'],
+        r['reactionTime'], r['GreenOnScreen'], r['correct']
+    ] for r in phase2_results]
 
     # Append results to the respective sheets
     if singular_data:
@@ -169,15 +169,20 @@ def RTT_save_results():
     # Mark the participant number as used in the Google Sheet
     update_participant_usage(participant_number)
 
-    print(f"Participant number {participant_number} marked as used and results saved.")
+    print(
+        f"Participant number {participant_number} marked as used and results saved."
+    )
     return jsonify({"status": "success"})
 
 
 def update_participant_usage(participant_number):
     global participants_df
-    participant_index = participants_df[participants_df['Number'] == participant_number].index
+    participant_index = participants_df[participants_df['Number'] ==
+                                        participant_number].index
     if len(participant_index) > 0:
-        new_index = int(participant_index[0]) + 2 # Google Sheets index starts at 1 and there's a header row
+        new_index = int(
+            participant_index[0]
+        ) + 2  # Google Sheets index starts at 1 and there's a header row
     else:
         print("no new index")
         new_index = 2
