@@ -153,11 +153,11 @@ def RTT_save_results():
 
     # Prepare data for appending
     singular_data = [[
-        participant_number, r['round'], r['reactionTime'], r['GreenOnScreen']
+        participant_number, r['round'], r['reactionTime'], r['trialActive']
     ] for r in phase1_results]
     multiple_data = [[
-        participant_number, r['round'], r['squareIndex'], r['pressedSquare'],
-        r['reactionTime'], r['GreenOnScreen'], r['correct']
+        participant_number, r['round'], r['squareId'], r['pressedKey'],
+        r['reactionTime'], r['trialActive'], r['correct']
     ] for r in phase2_results]
 
     # Append results to the respective sheets

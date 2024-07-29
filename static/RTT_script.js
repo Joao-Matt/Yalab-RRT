@@ -30,12 +30,11 @@ async function checkParticipant() {
 function proceedToPractice1() {
     isPractice = true;
     window.location.href = '/RTT_practice_1';
-    console.log(`Practice set to ${isPractice}`)
 }
 
 function proceedToPractice2() {
     phase = 'phase2'
-    isPratice = true;
+    isPractice = true;
     window.location.href = '/RTT_practice_2';
 }
 
@@ -73,8 +72,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 function startTrials() {
     trials = 0; // Reset trials for each phase
+    const currentPath = window.location.pathname; // Define currentPath here
+    if (currentPath.includes('RTT_practice_1') || currentPath.includes('RTT_practice_2')) {
+        isPractice = true;
+    }
     maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? 6 : 4);
     trialActive = false;
+    console.log(`Practice set to ${isPractice}`)
 
     startNextTrial(); // Start the first trial
 }
@@ -117,7 +121,11 @@ function changeColor() {
     preActivationTime = null; // Reset the pre-activation timer
 
     console.log('Square color changed to green'); // Debugging log
+
+    // Store the squareId globally for use in other functions
+    window.currentSquareId = squareId;
 }
+
 
 function detectKeyPress(event) {
     if (phase === 'phase1') {
@@ -132,7 +140,7 @@ function detectKeyPress(event) {
     } else {
         const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
         if (Object.values(validKeys).includes(event.key.toLowerCase())) {
-            const squareId = Object.keys(validKeys).find(key => validKeys[key] === event.key.toLowerCase());
+            const squareId = window.currentSquareId; // Use the globally stored squareId
             if (trialActive) {
                 handleReaction(squareId, event.key.toLowerCase());
             } else {
@@ -144,19 +152,22 @@ function detectKeyPress(event) {
     }
 }
 
+
 function handleReaction(squareId = 'square', pressedKey = 'space') {
     const reactionTime = new Date().getTime() - startTime;
     const correct = checkCorrectKey(squareId, pressedKey);
 
-    if (!isPractice) {
-        if (phase === 'phase1') {
-            resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
-        } else {
-            resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
-        }
+    if (!isPractice && phase === 'phase1') {
+        resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
+    } else if (!isPractice && phase === 'phase2') {
+        resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
     }
 
-    document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
+    console.log(`Reaction: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
+    if (phase === 'phase2') {
+        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
+    }
+
     trials++;
     resetSquare(squareId);
     trialActive = false;
@@ -167,25 +178,26 @@ function handleReaction(squareId = 'square', pressedKey = 'space') {
 
 
 function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
-    const reactionTime = new Date().getTime() - preActivationTime; // Pre-activation duration as reaction time
+    const reactionTime = new Date().getTime() - preActivationTime;
     const correct = false;
 
-    if (!isPractice) {
-        if (phase === 'phase1') {
-            resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
-        } else {
-            resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
-        }
+    if (!isPractice && phase === 'phase1') {
+        resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
+    } else if (!isPractice && phase === 'phase2') {
+        resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
     }
 
-    document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, Wrong`;
+    console.log(`Inactive Trial: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
+    if (phase === 'phase2') {
+        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, Wrong`;
+    }
+
     trials++;
     trialActive = false;
     document.removeEventListener('keydown', detectKeyPress);
 
     setTimeout(startNextTrial, 2000);
 }
-
 
 
 function endTrials() {
@@ -239,6 +251,7 @@ function resetSquare(squareId = 'square') {
 
 function checkCorrectKey(squareId, pressedKey) {
     const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
+    console.log(`Checking key: squareId=${squareId}, pressedKey=${pressedKey}, validKey=${validKeys[squareId]}`);
     return validKeys[squareId] === pressedKey;
 }
 
@@ -251,7 +264,7 @@ async function saveResults() {
     const phase1Results = JSON.parse(localStorage.getItem('phase1Results')) || [];
     const phase2Results = JSON.parse(localStorage.getItem('phase2Results')) || [];
 
-    const response = await fetch('/save-results', {
+    const response = await fetch('/RTT-save-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -269,7 +282,7 @@ async function saveResults() {
 
 async function markExperimentAsFinished() {
     const participantNumber = localStorage.getItem('participantNumber');
-    const response = await fetch('/finish-experiment', {
+    const response = await fetch('/RTT-finish-experiment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ participantNumber: participantNumber })
