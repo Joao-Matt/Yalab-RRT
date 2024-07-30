@@ -56,19 +56,31 @@ function proceedToInstructions2() {
 function finishExperiment() {
     saveResults().then(() => {
         markExperimentAsFinished();
+        window.location.href = '/RTT_success';
+    }).catch(error => {
+        console.error('Failed to finish experiment', error);  // Added for error handling
     });
 }
+
+
 
 document.addEventListener('DOMContentLoaded', (event) => {
     const currentPath = window.location.pathname;
     if (currentPath.includes('RTT_practice_1') || currentPath.includes('RTT_phase_1')) {
         phase = 'phase1';
+        if (!isPractice) {
+            resultsSingular = JSON.parse(localStorage.getItem('phase1Results')) || [];
+        }
         startTrials();
     } else if (currentPath.includes('RTT_practice_2') || currentPath.includes('RTT_phase_2')) {
         phase = 'phase2';
+        if (!isPractice) {
+            resultsMultiple = JSON.parse(localStorage.getItem('phase2Results')) || [];
+        }
         startTrials();
     }
 });
+
 
 function startTrials() {
     trials = 0; // Reset trials for each phase
@@ -134,7 +146,6 @@ function detectKeyPress(event) {
                 handleReaction();
             } else {
                 handleInactiveTrial();
-                trials++;
             }
         }
     } else {
@@ -146,7 +157,6 @@ function detectKeyPress(event) {
             } else {
                 handleInactiveTrial(squareId, event.key.toLowerCase());
                 resetSquare(squareId);
-                trials++;
             }
         }
     }
@@ -202,6 +212,13 @@ function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
 
 function endTrials() {
     localStorage.setItem(`${phase}Results`, JSON.stringify(isPractice ? resultsSingular : resultsMultiple));
+
+    if (phase === 'phase1' && !isPractice) {
+        localStorage.setItem('phase1Results', JSON.stringify(resultsSingular));
+    } else if (phase === 'phase2' && !isPractice) {
+        localStorage.setItem('phase2Results', JSON.stringify(resultsMultiple));
+    }
+
     const proceedButton = document.getElementById('proceedButton');
     const finishButton = document.getElementById('finishButton');
     const messageElement = document.getElementById('message');
@@ -222,6 +239,9 @@ function endTrials() {
         console.error('Proceed or Finish button not found');
     }
 }
+
+
+
 
 
 function resetAllSquares() {
@@ -250,9 +270,13 @@ function resetSquare(squareId = 'square') {
 }
 
 function checkCorrectKey(squareId, pressedKey) {
-    const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
-    console.log(`Checking key: squareId=${squareId}, pressedKey=${pressedKey}, validKey=${validKeys[squareId]}`);
-    return validKeys[squareId] === pressedKey;
+    if (phase === 'phase1') {
+        return pressedKey === 'space';
+    } else {
+        const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
+        console.log(`Checking key: squareId=${squareId}, pressedKey=${pressedKey}, validKey=${validKeys[squareId]}`);
+        return validKeys[squareId] === pressedKey;
+    }
 }
 
 function getRandomInt(min, max) {
@@ -264,21 +288,29 @@ async function saveResults() {
     const phase1Results = JSON.parse(localStorage.getItem('phase1Results')) || [];
     const phase2Results = JSON.parse(localStorage.getItem('phase2Results')) || [];
 
-    const response = await fetch('/RTT-save-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            participantNumber: participantNumber,
-            phase1Results: phase1Results,
-            phase2Results: phase2Results
-        })
-    });
+    try {
+        const response = await fetch('/RTT_save_results', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                participantNumber: participantNumber,
+                phase1Results: phase1Results,
+                phase2Results: phase2Results
+            })
+        });
 
-    const data = await response.json();
-    if (data.status !== 'success') {
-        console.error('Failed to save results');
+        const data = await response.json();
+        if (data.status !== 'success') {
+            console.error('Failed to save results');
+            throw new Error('Failed to save results');
+        }
+    } catch (error) {
+        console.error('Error saving results:', error);  // Added for error handling
+        alert('Failed to save results. Please try again.');  // Added for error handling
     }
 }
+
+
 
 async function markExperimentAsFinished() {
     const participantNumber = localStorage.getItem('participantNumber');

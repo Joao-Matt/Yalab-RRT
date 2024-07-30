@@ -110,6 +110,11 @@ def phase2():
     return render_template('RTT_phase_2.html')
 
 
+@app.route('/RTT_success')
+def RTT_success():
+    return render_template('RTT_success.html')
+
+
 # Route to serve static files explicitly
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -144,9 +149,10 @@ def RTT_check_participant():
         })
 
 
-@app.route('/RTT-save-results', methods=['POST'])
+@app.route('/RTT_save_results', methods=['POST'])
 def RTT_save_results():
     data = request.json
+    print(f"Received data: {data}")  # Added for debugging
     participant_number = str(data.get('participantNumber')).strip()
     phase1_results = data.get('phase1Results') or []
     phase2_results = data.get('phase2Results') or []
@@ -155,10 +161,13 @@ def RTT_save_results():
     singular_data = [[
         participant_number, r['round'], r['reactionTime'], r['trialActive']
     ] for r in phase1_results]
+    print(f"Singular data: {singular_data}")  # Added for debugging
+
     multiple_data = [[
         participant_number, r['round'], r['squareId'], r['pressedKey'],
         r['reactionTime'], r['trialActive'], r['correct']
     ] for r in phase2_results]
+    print(f"Multiple data: {multiple_data}")  # Added for debugging
 
     # Append results to the respective sheets
     if singular_data:
