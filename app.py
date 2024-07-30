@@ -125,22 +125,28 @@ def serve_static(filename):
 def RTT_check_participant():
     data = request.json
     participant_number = data.get('participantNumber')
+    password = data.get('password')
     print(f"Received participant number: {participant_number}")
 
     if participant_number in participants_df['Number'].values:
-        print("Participant number found in the dataset.")
-        participant = participants_df[participants_df['Number'] ==
-                                      participant_number].iloc[0]
-        if participant['Singular RTT Used'] == 0 and participant[
-                'Multiple RTT Used'] == 0:
-            print("Participant number is valid and not used.")
-            return jsonify({"status": "success"})
+        if password in participants_df['PW'].values:
+            print("Participant number found in the dataset.")
+            participant = participants_df[participants_df['Number'] ==
+                                          participant_number].iloc[0]
+            if participant['Singular RTT Used'] == 0 and participant[
+                    'Multiple RTT Used'] == 0:
+                print("Participant number is valid and not used.")
+                return jsonify({"status": "success"})
+            else:
+                print("Participant number has already been used.")
+                return jsonify({
+                    "status":
+                    "error",
+                    "message":
+                    "מספר כבר שומש או לא נכון, נא לנסות שנית"
+                })
         else:
-            print("Participant number has already been used.")
-            return jsonify({
-                "status": "error",
-                "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"
-            })
+            print("incorrect password")
     else:
         print("Participant number not found.")
         return jsonify({
@@ -181,6 +187,16 @@ def RTT_save_results():
     print(
         f"Participant number {participant_number} marked as used and results saved."
     )
+    return jsonify({"status": "success"})
+
+@app.route('/RTT_finish_experiment', methods=['POST'])
+def RTT_finish_experiment():
+    data = request.json
+    participant_number = data.get('participantNumber')
+
+    # Mark the participant number as used in the Google Sheet
+    update_participant_usage(participant_number)
+
     return jsonify({"status": "success"})
 
 

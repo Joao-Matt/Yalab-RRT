@@ -12,10 +12,11 @@ let isPractice = false;
 
 async function checkParticipant() {
     const participantNumber = document.getElementById('participantNumber').value;
+    const password = document.getElementById('password').value;
     const response = await fetch('/RTT-check-participant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantNumber: participantNumber })
+        body: JSON.stringify({ participantNumber: participantNumber, password: password })
     });
 
     const data = await response.json();
@@ -52,16 +53,6 @@ function proceedToPhase2() {
 function proceedToInstructions2() {
     window.location.href = '/RTT_instructions_2';
 }
-
-function finishExperiment() {
-    saveResults().then(() => {
-        markExperimentAsFinished();
-        window.location.href = '/RTT_success';
-    }).catch(error => {
-        console.error('Failed to finish experiment', error);  // Added for error handling
-    });
-}
-
 
 
 document.addEventListener('DOMContentLoaded', (event) => {
@@ -241,9 +232,6 @@ function endTrials() {
 }
 
 
-
-
-
 function resetAllSquares() {
     for (let i = 1; i <= 4; i++) {
         const square = document.getElementById(`square${i}`);
@@ -283,6 +271,39 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function finishExperiment() {
+    saveResults().then(() => {
+        markExperimentAsFinished().then(() => {
+            window.location.href = '/RTT_success';
+        }).catch((error) => {
+            console.error('Failed to finish experiment', error);
+        });
+    }).catch((error) => {
+        console.error('Failed to save results', error);
+    });
+}
+
+async function markExperimentAsFinished() {
+    const participantNumber = localStorage.getItem('participantNumber');
+    try {
+        const response = await fetch('/RTT_finish_experiment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ participantNumber: participantNumber })
+        });
+
+        const data = await response.json();
+        if (data.status !== 'success') {
+            console.error('Failed to finish experiment');
+            throw new Error('Failed to finish experiment');
+        }
+    } catch (error) {
+        console.error('Error finishing experiment:', error);
+        throw error;  // Ensure the error is caught in the finishExperiment function
+    }
+}
+
+
 async function saveResults() {
     const participantNumber = localStorage.getItem('participantNumber');
     const phase1Results = JSON.parse(localStorage.getItem('phase1Results')) || [];
@@ -307,25 +328,6 @@ async function saveResults() {
     } catch (error) {
         console.error('Error saving results:', error);  // Added for error handling
         alert('Failed to save results. Please try again.');  // Added for error handling
+        throw error;  // Re-throw the error to be caught in the finishExperiment function
     }
 }
-
-
-
-async function markExperimentAsFinished() {
-    const participantNumber = localStorage.getItem('participantNumber');
-    const response = await fetch('/RTT-finish-experiment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantNumber: participantNumber })
-    });
-
-    const data = await response.json();
-    if (data.status === 'success') {
-        alert('Experiment finished successfully!');
-    } else {
-        console.error('Failed to finish experiment');
-    }
-}
-
-
