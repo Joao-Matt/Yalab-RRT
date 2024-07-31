@@ -35,24 +35,71 @@ service = build('sheets', 'v4', credentials=credentials)
 # Call the Sheets API
 sheet = service.spreadsheets()
 
-
 # Load participants data from Google Sheets
 def load_participants_from_sheet():
-    result = sheet.values().get(spreadsheetId=YalabSheet,
-                                range='participants!A:D').execute()
+    result = sheet.values().get(spreadsheetId=YalabSheet, range='participants!A:E').execute()
     values = result.get('values', [])
     participants_df = pd.DataFrame(values[1:], columns=values[0])
     participants_df['Number'] = participants_df['Number'].astype(str)
-    participants_df['Singular RTT Used'] = participants_df[
-        'Singular RTT Used'].astype(int)
-    participants_df['Multiple RTT Used'] = participants_df[
-        'Multiple RTT Used'].astype(int)
+    participants_df['Singular RTT Used'] = participants_df['Singular RTT Used'].astype(int)
+    participants_df['Multiple RTT Used'] = participants_df['Multiple RTT Used'].astype(int)
+    participants_df['DS Used'] = participants_df['DS Used'].astype(int)  # Ensure DS Used column is loaded
     return participants_df
 
+@app.route('/DS-check-participant', methods=['POST'])
+def DS_check_participant():
+    data = request.json
+    participant_number = data.get('participantNumber')
+    password = data.get('password')
+    print(f"Received participant number: {participant_number} and password for DigitSpan")
 
-participants_df = load_participants_from_sheet()
-print("Loaded participants data from Google Sheets:")
-print(participants_df)
+    if participant_number in participants_df['Number'].values:
+        print("Participant number found in the dataset.")
+        participant = participants_df[participants_df['Number'] == participant_number].iloc[0]
+
+        if password == participant['PW']:  # Check if the password matches the one in the dataset
+            if participant['DS Used'] == 0:
+                print("Participant number is valid and not used.")
+                return jsonify({"status": "success"})
+            else:
+                print("Participant number has already been used.")
+                return jsonify({"status": "error", "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"})
+        else:
+            return jsonify({"status": "error", "message": "סיסמא שגויה"})
+    else:
+        print("Participant number not found.")
+        return jsonify({"status": "error", "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"})
+
+@app.route('/RTT-check-participant', methods=['POST'])
+def RTT_check_participant():
+    data = request.json
+    participant_number = data.get('participantNumber')
+    password = data.get('password')
+    print(f"Received participant number: {participant_number}")
+
+    if participant_number in participants_df['Number'].values:
+        print("Participant number found in the dataset.")
+        participant = participants_df[participants_df['Number'] == participant_number].iloc[0]
+
+        if password == participant['PW']:  # Check if the password matches the one in the dataset
+            if participant['Singular RTT Used'] == 0 and participant['Multiple RTT Used'] == 0:
+                print("Participant number is valid and not used.")
+                return jsonify({"status": "success"})
+            else:
+                print("Participant number has already been used.")
+                return jsonify({
+                    "status": "error",
+                    "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"
+                })
+        else:
+            print("Incorrect password")
+            return jsonify({"status": "error", "message": "Incorrect password"})
+    else:
+        print("Participant number not found.")
+        return jsonify({
+            "status": "error",
+            "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"
+        })
 
 
 def append_to_singular_rtt(data):
@@ -75,7 +122,22 @@ def append_to_multiple_rtt(data):
     return result
 
 
+participants_df = load_participants_from_sheet()
+print("Loaded participants data from Google Sheets:")
+print(participants_df)
+
+
 @app.route('/')
+def main_index():
+    return render_template('index.html')  # Serve the main index HTML file
+
+
+@app.route('/DS_index')
+def ds_index():
+    return render_template('DS_index.html')
+
+
+@app.route('/RTT_index')
 def index():
     return render_template('RTT_index.html')  # Serve the main HTML file
 
@@ -121,40 +183,6 @@ def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
 
 
-@app.route('/RTT-check-participant', methods=['POST'])
-def RTT_check_participant():
-    data = request.json
-    participant_number = data.get('participantNumber')
-    password = data.get('password')
-    print(f"Received participant number: {participant_number}")
-
-    if participant_number in participants_df['Number'].values:
-        if password in participants_df['PW'].values:
-            print("Participant number found in the dataset.")
-            participant = participants_df[participants_df['Number'] ==
-                                          participant_number].iloc[0]
-            if participant['Singular RTT Used'] == 0 and participant[
-                    'Multiple RTT Used'] == 0:
-                print("Participant number is valid and not used.")
-                return jsonify({"status": "success"})
-            else:
-                print("Participant number has already been used.")
-                return jsonify({
-                    "status":
-                    "error",
-                    "message":
-                    "מספר כבר שומש או לא נכון, נא לנסות שנית"
-                })
-        else:
-            print("incorrect password")
-    else:
-        print("Participant number not found.")
-        return jsonify({
-            "status": "error",
-            "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"
-        })
-
-
 @app.route('/RTT_save_results', methods=['POST'])
 def RTT_save_results():
     data = request.json
@@ -188,6 +216,7 @@ def RTT_save_results():
         f"Participant number {participant_number} marked as used and results saved."
     )
     return jsonify({"status": "success"})
+
 
 @app.route('/RTT_finish_experiment', methods=['POST'])
 def RTT_finish_experiment():

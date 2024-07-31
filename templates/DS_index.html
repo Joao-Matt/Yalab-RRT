@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Game</title>
+    <link rel="stylesheet" href="{{ url_for('serve_static', filename='DS_styles.css') }}">
+    <script>
+        
+    </script>
+</head>
+
+<body>
+    <div id="welcomeScreen">
+        <p>ברוך הבא למשחק הזיכרון</p>
+        <button id="startButton" onclick="showInputScreen()">התחל</button>
+    </div>
+
+    <!-- Input Screen for participant number and password (initially hidden) -->
+    <div id="inputScreen" style="display: none;">
+        <p>הכנס מספר משתתף וסיסמא</p>
+        <input type="text" id="participantNumber" placeholder="Participant Number">
+        <input type="password" id="password" placeholder="Password">
+        <button id="checkButton" onclick="checkDSParticipant()">Check</button>
+        <p id="message"></p>
+    </div>
+
+    <!-- Display area for showing random digits -->
+    <div id="randomDigits" style="display: none;">
+        <p id="digitDisplay"></p>
+    </div>
+
+    <!-- Game area (initially hidden) -->
+    <div id="gameArea" style="display: none;">
+        <!-- Display area for showing pressed digits -->
+        <div id="messageArea"></div>
+        <div id="displayArea"></div>
+
+        <!-- Keypad -->
+        <div id="keypad">
+            <div class="row">
+                <button class="key" onclick="keyPressed(1)">1</button>
+                <button class="key" onclick="keyPressed(2)">2</button>
+                <button class="key" onclick="keyPressed(3)">3</button>
+            </div>
+            <div class="row">
+                <button class="key" onclick="keyPressed(4)">4</button>
+                <button class="key" onclick="keyPressed(5)">5</button>
+                <button class="key" onclick="keyPressed(6)">6</button>
+            </div>
+            <div class="row">
+                <button class="key" onclick="keyPressed(7)">7</button>
+                <button class="key" onclick="keyPressed(8)">8</button>
+                <button class="key" onclick="keyPressed(9)">9</button>
+            </div>
+            <div class="row">
+                <button class="key special" onclick="deleteLast()">Delete</button>
+                <button class="key" onclick="keyPressed(0)">0</button>
+                <button class="key special" onclick="enterPressed()">Enter</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('serve_static', filename='DS_logic.js') }}"></script>
+</body>
+
+</html>

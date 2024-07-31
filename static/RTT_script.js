@@ -10,6 +10,7 @@ let preActivationTime;
 let trialActive = false;
 let isPractice = false;
 
+
 async function checkParticipant() {
     const participantNumber = document.getElementById('participantNumber').value;
     const password = document.getElementById('password').value;
