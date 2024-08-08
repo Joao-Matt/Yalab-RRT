@@ -1,14 +1,17 @@
-let generatedSequence = ''; // Global variable to store the generated sequence
 let playerInputDigits = ''; // Variable to store the player's entered digits
+let generatedSequence = ''; // Global variable to store the generated sequence
 let startTime; // Timer start time for responses
 let currentRound = 0; // Initialize the current round counter
 const maxRounds = 3; // Define the maximum number of rounds, in the future will be 20
 let gameData = []; // Array to hold each round's data
 let generatedNumbers = []; // Array to hold the random info from the game
 let timeData = []; // Array to hold timing 
+let stringLength = []; // Length of strings
 let currentDigitLength = 2;  // Start with 2 digits
 let correctCount = 0;        // Counter for consecutive correct answers
 let authInstance;
+let isGameEnded = false; // Flag to track if the game has ended
+let results = []; // List to store the results
 
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -19,24 +22,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('checkButton').addEventListener('click', checkDSParticipant);
 });
-
-async function checkDSParticipant() {
-    const participantNumber = document.getElementById('participantNumber').value;
-    const password = document.getElementById('password').value;
-    const response = await fetch('/DS-check-participant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantNumber: participantNumber, password: password })
-    });
-
-    const data = await response.json();
-    if (data.status === 'success') {
-        localStorage.setItem('participantNumber', participantNumber);
-        startGame();  // Start the game directly after successful validation
-    } else {
-        document.getElementById('message').innerText = data.message;
-    }
-}
 
 function showInputScreen() {
     document.getElementById('welcomeScreen').style.display = 'none';
@@ -68,20 +53,26 @@ function generateNumber() {
 }
 
 function startGame() {
+    if (isGameEnded) return; // Prevent starting a new game if the game has ended
+
     document.getElementById('inputScreen').style.display = 'none';
-    document.getElementById('gameArea').style.display = 'flex'; // Ensure game area is visible
     currentRound = 0;  // Reset current round
     correctCount = 0;  // Reset correct count
     currentDigitLength = 2;  // Reset digit length
     gameData = [];  // Clear game data
     generatedNumbers = [];  // Clear generated numbers
     timeData = [];  // Clear time data
-    startNextRound();  // Start the first round
+    results = []; // Clear results data for new game
+
+    nextRound();  // Start the first round
 }
 
-function startNextRound() {
+
+function nextRound() {
+    if (isGameEnded) return; // Prevent starting a new round if the game has ended
+
     if (currentRound < maxRounds) {
-        generatedSequence = generateNumber(); // Ensures a 2-digit number and convert to string
+        generatedSequence = generateNumber(); // Ensures a number of the current digit length
         document.getElementById('digitDisplay').textContent = generatedSequence;
         document.getElementById('gameArea').style.display = 'none';
         document.getElementById('messageArea').textContent = '';
@@ -117,12 +108,11 @@ function enterPressed() {
     const displayArea = document.getElementById('displayArea');
     const enteredSequence = displayArea.textContent;
     const messageArea = document.getElementById('messageArea');
+    const sequenceLength = currentDigitLength;
     const result = enteredSequence === generatedSequence ? 'Correct' : 'Incorrect';
 
-    gameData.push(enteredSequence);
-    generatedNumbers.push(generatedSequence);
-    timeData.push(elapsedTime);
-
+    results.push({ playerInputDigits, round: currentRound + 1, generatedSequence, sequenceLength, enteredSequence, elapsedTime, result });
+    
     if (result === 'Correct') {
         correctCount++;
         if (correctCount % 2 === 0) {
@@ -142,7 +132,7 @@ function enterPressed() {
         setTimeout(function () {
             messageArea.textContent = '';
             startGame();
-        }, 2000);
+        }, 1000);
     } else {
         endGame();
     }
@@ -158,48 +148,60 @@ function logRoundData(inputDigits, generatedDigits, subjectResponse, responseTim
 }
 
 function endGame() {
+    isGameEnded = true; // Set the flag to true to indicate the game has ended
     document.getElementById('messageArea').textContent = 'המשחק הושלם';
     console.log('המשחק הושלם');
-    console.log('Typed Answers:', gameData);
-    console.log('Generated Digits:', generatedNumbers);
-    console.log('Response Times:', timeData);
 
-    // Generate and upload CSV file to Google Drive
-    const filename = `${playerInputDigits}_gameData.csv`; // Create a filename using playerInputDigits
-    generateCSVFileAndUpload(gameData, generatedNumbers, timeData, filename);
-}
-
-function generateCSVFileAndUpload(gameData, generatedNumbers, timeData, filename) {
-    let csvContent = "Subject's Code,Generated Digit,Typed Answer,Response Time (ms)\n";
-
-    for (let i = 0; i < gameData.length; i++) {
-        csvContent += `${playerInputDigits},${generatedNumbers[i]},${gameData[i]},${timeData[i]}\n`;
+    // Process results
+    for (let i = 0; i < maxRounds; i++) {
+        results.push({
+            participantNumber: playerInputDigits,
+            round: i + 1,
+            generatedSequence: generatedNumbers[i],
+            sequenceLength: stringLength[i],
+            enteredSequence: gameData[i],
+            elapsedTime: timeData[i],
+            result: generatedNumbers[i] === gameData[i] ? 'Correct' : 'Incorrect'
+        });
     }
 
-    // Convert CSV content to Blob
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Log the results for verification
+    console.log('Results:', results);
 
-    // Upload Blob to Google Drive
-    uploadFileToDrive(blob, filename);
+    // Additional actions for ending the game can be added here
 }
 
-function uploadFileToDrive(blob, filename) {
-    const fileMetadata = {
-        'name': filename,
-        'mimeType': 'text/csv'
-    };
-    const media = {
-        mimeType: 'text/csv',
-        body: blob
-    };
+// function generateCSVFileAndUpload(gameData, generatedNumbers, timeData, filename) {
+//     let csvContent = "Subject's Code,Generated Digit,Typed Answer,Response Time (ms)\n";
 
-    gapi.client.drive.files.create({
-        resource: fileMetadata,
-        media: media,
-        fields: 'id'
-    }).then(function (response) {
-        console.log('File ID:', response.result.id);
-    }).catch(function (error) {
-        console.error('Error uploading file:', error);
-    });
-}
+//     for (let i = 0; i < gameData.length; i++) {
+//         csvContent += `${playerInputDigits},${generatedNumbers[i]},${gameData[i]},${timeData[i]}\n`;
+//     }
+
+//     // Convert CSV content to Blob
+//     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+//     // Upload Blob to Google Drive
+//     uploadFileToDrive(blob, filename);
+// }
+
+// function uploadFileToDrive(blob, filename) {
+//     const fileMetadata = {
+//         'name': filename,
+//         'mimeType': 'text/csv'
+//     };
+//     const media = {
+//         mimeType: 'text/csv',
+//         body: blob
+//     };
+
+//     gapi.client.drive.files.create({
+//         resource: fileMetadata,
+//         media: media,
+//         fields: 'id'
+//     }).then(function (response) {
+//         console.log('File ID:', response.result.id);
+//     }).catch(function (error) {
+//         console.error('Error uploading file:', error);
+//     });
+// }

@@ -67,6 +67,17 @@ html {
     /* Changes the cursor to a pointer to indicate it's clickable */
 }
 
+/* Styles for the start button to make it more prominent */
+#saveButton {
+    padding: 10px 20px;
+    font-size: 20px;
+    /* Larger font size for the button text */
+    margin-top: 20px;
+    /* Space between the message and the button */
+    cursor: pointer;
+    /* Changes the cursor to a pointer to indicate it's clickable */
+}
+
 /* Centering the digit display */
 #randomDigits,
 #digitDisplay {

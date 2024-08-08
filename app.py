@@ -35,40 +35,59 @@ service = build('sheets', 'v4', credentials=credentials)
 # Call the Sheets API
 sheet = service.spreadsheets()
 
+
 # Load participants data from Google Sheets
 def load_participants_from_sheet():
-    result = sheet.values().get(spreadsheetId=YalabSheet, range='participants!A:E').execute()
+    result = sheet.values().get(spreadsheetId=YalabSheet,
+                                range='participants!A:E').execute()
     values = result.get('values', [])
     participants_df = pd.DataFrame(values[1:], columns=values[0])
     participants_df['Number'] = participants_df['Number'].astype(str)
-    participants_df['Singular RTT Used'] = participants_df['Singular RTT Used'].astype(int)
-    participants_df['Multiple RTT Used'] = participants_df['Multiple RTT Used'].astype(int)
-    participants_df['DS Used'] = participants_df['DS Used'].astype(int)  # Ensure DS Used column is loaded
+    participants_df['Singular RTT Used'] = participants_df[
+        'Singular RTT Used'].astype(int)
+    participants_df['Multiple RTT Used'] = participants_df[
+        'Multiple RTT Used'].astype(int)
+    participants_df['DS Used'] = participants_df['DS Used'].astype(
+        int)  # Ensure DS Used column is loaded
     return participants_df
+
 
 @app.route('/DS-check-participant', methods=['POST'])
 def DS_check_participant():
     data = request.json
     participant_number = data.get('participantNumber')
     password = data.get('password')
-    print(f"Received participant number: {participant_number} and password for DigitSpan")
+    print(
+        f"Received participant number: {participant_number} and password for DigitSpan"
+    )
 
     if participant_number in participants_df['Number'].values:
         print("Participant number found in the dataset.")
-        participant = participants_df[participants_df['Number'] == participant_number].iloc[0]
+        participant = participants_df[participants_df['Number'] ==
+                                      participant_number].iloc[0]
 
-        if password == participant['PW']:  # Check if the password matches the one in the dataset
+        if password == participant[
+                'PW']:  # Check if the password matches the one in the dataset
             if participant['DS Used'] == 0:
                 print("Participant number is valid and not used.")
                 return jsonify({"status": "success"})
             else:
                 print("Participant number has already been used.")
-                return jsonify({"status": "error", "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"})
+                return jsonify({
+                    "status":
+                    "error",
+                    "message":
+                    "מספר כבר שומש או לא נכון, נא לנסות שנית"
+                })
         else:
             return jsonify({"status": "error", "message": "סיסמא שגויה"})
     else:
         print("Participant number not found.")
-        return jsonify({"status": "error", "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"})
+        return jsonify({
+            "status": "error",
+            "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"
+        })
+
 
 @app.route('/RTT-check-participant', methods=['POST'])
 def RTT_check_participant():
@@ -79,21 +98,29 @@ def RTT_check_participant():
 
     if participant_number in participants_df['Number'].values:
         print("Participant number found in the dataset.")
-        participant = participants_df[participants_df['Number'] == participant_number].iloc[0]
+        participant = participants_df[participants_df['Number'] ==
+                                      participant_number].iloc[0]
 
-        if password == participant['PW']:  # Check if the password matches the one in the dataset
-            if participant['Singular RTT Used'] == 0 and participant['Multiple RTT Used'] == 0:
+        if password == participant[
+                'PW']:  # Check if the password matches the one in the dataset
+            if participant['Singular RTT Used'] == 0 and participant[
+                    'Multiple RTT Used'] == 0:
                 print("Participant number is valid and not used.")
                 return jsonify({"status": "success"})
             else:
                 print("Participant number has already been used.")
                 return jsonify({
-                    "status": "error",
-                    "message": "מספר כבר שומש או לא נכון, נא לנסות שנית"
+                    "status":
+                    "error",
+                    "message":
+                    "מספר כבר שומש או לא נכון, נא לנסות שנית"
                 })
         else:
             print("Incorrect password")
-            return jsonify({"status": "error", "message": "Incorrect password"})
+            return jsonify({
+                "status": "error",
+                "message": "Incorrect password"
+            })
     else:
         print("Participant number not found.")
         return jsonify({
@@ -116,6 +143,16 @@ def append_to_multiple_rtt(data):
     body = {'values': data}
     result = sheet.values().append(spreadsheetId=YalabSheet,
                                    range='Multiple_RTT!A1',
+                                   valueInputOption='RAW',
+                                   insertDataOption='INSERT_ROWS',
+                                   body=body).execute()
+    return result
+
+
+def append_to_ds_results(data):
+    body = {'values': data}
+    result = sheet.values().append(spreadsheetId=YalabSheet,
+                                   range='DS_Results!A1',
                                    valueInputOption='RAW',
                                    insertDataOption='INSERT_ROWS',
                                    body=body).execute()
@@ -256,6 +293,66 @@ def update_participant_usage(participant_number):
                         'Singular RTT Used'] = 1
     participants_df.loc[participants_df['Number'] == participant_number,
                         'Multiple RTT Used'] = 1
+
+
+@app.route('/DS_save_results', methods=['POST'])
+def DS_save_results():
+    data = request.json
+    print(f"Received data: {data}")  # Added for debugging
+    participant_number = str(data.get('participantNumber')).strip()
+    ds_results = data.get('dsResults') or []
+
+    # Prepare data for appending
+    ds_data = [[
+        participant_number, r['round'], r['generatedSequence'],
+        r['sequenceLength'], r['enteredSequence'], r['elapsedTime'],
+        r['result']
+    ] for r in ds_results]
+    print(f"DS data: {ds_data}")  # Added for debugging
+
+    # Append results to the respective sheets
+    if ds_data:
+        append_to_ds_results(ds_data)
+
+    # Mark the participant number as used in the Google Sheet
+    update_ds_participant_usage(participant_number)
+
+    print(
+        f"Participant number {participant_number} marked as used and results saved."
+    )
+    return jsonify({"status": "success"})
+
+
+@app.route('/DS_finish_experiment', methods=['POST'])
+def DS_finish_experiment():
+    data = request.json
+    participant_number = data.get('participantNumber')
+
+    # Mark the participant number as used in the Google Sheet
+    update_ds_participant_usage(participant_number)
+
+    return jsonify({"status": "success"})
+
+
+def update_ds_participant_usage(participant_number):
+    global participants_df
+    participant_index = participants_df[participants_df['Number'] ==
+                                        participant_number].index
+    if len(participant_index) > 0:
+        new_index = int(
+            participant_index[0]
+        ) + 2  # Google Sheets index starts at 1 and there's a header row
+    else:
+        print("no new index")
+        new_index = 2
+    sheet.values().update(spreadsheetId=YalabSheet,
+                          range=f'participants!E{new_index}',
+                          valueInputOption='RAW',
+                          body={
+                              'values': [['1']]
+                          }).execute()
+    participants_df.loc[participants_df['Number'] == participant_number,
+                        'DS Used'] = 1
 
 
 if __name__ == '__main__':
