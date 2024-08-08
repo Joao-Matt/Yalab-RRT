@@ -56,14 +56,6 @@ function startGame() {
     if (isGameEnded) return; // Prevent starting a new game if the game has ended
 
     document.getElementById('inputScreen').style.display = 'none';
-    currentRound = 0;  // Reset current round
-    correctCount = 0;  // Reset correct count
-    currentDigitLength = 2;  // Reset digit length
-    gameData = [];  // Clear game data
-    generatedNumbers = [];  // Clear generated numbers
-    timeData = [];  // Clear time data
-    results = []; // Clear results data for new game
-
     nextRound();  // Start the first round
 }
 
