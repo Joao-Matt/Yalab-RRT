@@ -9,7 +9,18 @@ let startTime;
 let preActivationTime;
 let trialActive = false;
 let isPractice = false;
+const phase1Element = document.getElementById('phase1-rounds');
+const phase2Element = document.getElementById('phase2-rounds');
 
+document.addEventListener('DOMContentLoaded', function () {
+    if (phase1Element) {
+        phase1Element.textContent = phase1Rounds;
+    }
+
+    if (phase2Element) {
+        phase2Element.textContent = phase2Rounds;
+    }
+});
 
 async function checkParticipant() {
     const participantNumber = document.getElementById('participantNumber').value;
@@ -80,7 +91,7 @@ function startTrials() {
     if (currentPath.includes('RTT_practice_1') || currentPath.includes('RTT_practice_2')) {
         isPractice = true;
     }
-    maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? 6 : 4);
+    maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? phase2Element : phase1Element);
     trialActive = false;
     console.log(`Practice set to ${isPractice}`)
 
@@ -217,18 +228,18 @@ function endTrials() {
 
     if (isPractice && phase === 'phase1' && proceedButton) {
         proceedButton.style.display = 'block';
-        messageElement.innerText = `Practice 1 completed. Press "Proceed to Phase 1" when you are ready.`;
+        messageElement.innerText = `אימון שלב 1 הושלם. לחץ על "המשך לשלב 1" כאשר אתה מוכן.`;
     } else if (phase === 'phase1' && proceedButton) {
         proceedButton.style.display = 'block';
-        messageElement.innerText = `Phase 1 completed. Press "Proceed to Instructions 2" when you are ready.`;
+        messageElement.innerText = `שלב 1 הושלם. לחץ על "המשך להוראות שלב 2" כאשר אתה מוכן.`;
     } else if (isPractice && phase === 'phase2' && proceedButton) {
         proceedButton.style.display = 'block';
-        messageElement.innerText = `Practice 2 completed. Press "Proceed to Phase 2" when you are ready.`;
+        messageElement.innerText = `אימון שלב 2 הושלם. לחץ על "המשך לשלב 2" כאשר אתה מוכן.`;
     } else if (phase === 'phase2' && finishButton) {
         finishButton.style.display = 'block';
-        messageElement.innerText = `Phase 2 completed. Press "Finish Experiment" to save your results.`;
+        messageElement.innerText = `שלב 2 הושלם. לחץ על "סיום הניסוי" כדי לשמור את התוצאות.`;
     } else {
-        console.error('Proceed or Finish button not found');
+        console.error('כפתור "המשך" או "סיום" לא נמצא');
     }
 }
 

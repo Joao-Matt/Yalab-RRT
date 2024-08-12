@@ -9,10 +9,10 @@
 </head>
 
 <body>
-    <h1>Enter Participant Number and Password</h1>
-    <input type="text" id="participantNumber" placeholder="Participant Number">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="checkParticipant()">Submit</button>
+    <h1 style="text-align: right; direction: rtl;">הכנס מספר משתתף וסיסמא</h1>
+    <input type="text" id="participantNumber" placeholder="מספר משתתף">
+    <input type="password" id="password" placeholder="סיסמא">
+    <button onclick="checkParticipant()">כנס</button>
     <p id="message"></p>
 
     <script src="{{ url_for('serve_static', filename='RTT_script.js') }}"></script>
