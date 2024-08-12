@@ -1,15 +1,14 @@
 let playerInputDigits = ''; // Variable to store the player's entered digits
+const maxRounds = 3; // Define the maximum number of rounds, in the future will be 20
+let currentDigitLength = 2;  // Start with 2 digits
 let generatedSequence = ''; // Global variable to store the generated sequence
 let startTime; // Timer start time for responses
 let currentRound = 0; // Initialize the current round counter
-const maxRounds = 3; // Define the maximum number of rounds, in the future will be 20
 let gameData = []; // Array to hold each round's data
 let generatedNumbers = []; // Array to hold the random info from the game
 let timeData = []; // Array to hold timing 
 let stringLength = []; // Length of strings
-let currentDigitLength = 2;  // Start with 2 digits
 let correctCount = 0;        // Counter for consecutive correct answers
-let authInstance;
 let isGameEnded = false; // Flag to track if the game has ended
 let results = []; // List to store the results
 
@@ -40,6 +39,8 @@ async function checkDSParticipant() {
     const data = await response.json();
     if (data.status === 'success') {
         localStorage.setItem('participantNumber', participantNumber);
+        playerInputDigits = participantNumber
+        console.log('1st Participant Number:', playerInputDigits);
         startGame();  // Start the game directly after successful validation
     } else {
         document.getElementById('message').innerText = data.message;
@@ -61,20 +62,73 @@ function startGame() {
 
 
 function nextRound() {
-    if (isGameEnded) return; // Prevent starting a new round if the game has ended
+    if (isGameEnded) return;
 
     if (currentRound < maxRounds) {
-        generatedSequence = generateNumber(); // Ensures a number of the current digit length
+        generatedSequence = generateNumber();
         document.getElementById('digitDisplay').textContent = generatedSequence;
         document.getElementById('gameArea').style.display = 'none';
         document.getElementById('messageArea').textContent = '';
         document.getElementById('randomDigits').style.display = 'block';
 
+        // Store generated sequence and current string length
+        generatedNumbers.push(generatedSequence);
+        stringLength.push(currentDigitLength);
+
         setTimeout(function () {
             document.getElementById('randomDigits').style.display = 'none';
             document.getElementById('gameArea').style.display = 'flex';
-            startTime = performance.now(); // Start the timer after showing the keypad
+            startTime = performance.now();
         }, 2000);
+    } else {
+        endGame();
+    }
+}
+
+function enterPressed() {
+    const endTime = performance.now();
+    const elapsedTime = endTime - startTime;
+    const displayArea = document.getElementById('displayArea');
+    const enteredSequence = displayArea.textContent;
+    const messageArea = document.getElementById('messageArea');
+    const result = enteredSequence === generatedSequence ? 'Correct' : 'Incorrect';
+
+    // Store the entered sequence and elapsed time
+    gameData.push(enteredSequence);
+    timeData.push(elapsedTime);
+
+    // Ensure no duplicate entries
+    results.push({ 
+        playerInputDigits, 
+        round: currentRound + 1, 
+        generatedSequence, 
+        sequenceLength: currentDigitLength, 
+        enteredSequence, 
+        elapsedTime, 
+        result 
+    });
+
+    // Logic to handle correct and incorrect answers
+    if (result === 'Correct') {
+        correctCount++;
+        messageArea.textContent = '!נכון'
+        if (correctCount % 2 === 0) {
+            currentDigitLength++;  // Increase the digit length after every 2 consecutive correct answers
+        }
+    } else {
+        messageArea.textContent = '!טעות'
+        correctCount = 0;  // Reset the correct count on incorrect answer
+    }
+
+    // Update the UI
+    displayArea.textContent = '';
+    currentRound++;
+
+    if (currentRound < maxRounds) {
+        setTimeout(function () {
+            messageArea.textContent = '';
+            nextRound();
+        }, 1000);
     } else {
         endGame();
     }
@@ -94,106 +148,73 @@ function deleteLast() {
     displayArea.textContent = displayArea.textContent.slice(0, -1);
 }
 
-function enterPressed() {
-    const endTime = performance.now();
-    const elapsedTime = endTime - startTime;
-    const displayArea = document.getElementById('displayArea');
-    const enteredSequence = displayArea.textContent;
-    const messageArea = document.getElementById('messageArea');
-    const sequenceLength = currentDigitLength;
-    const result = enteredSequence === generatedSequence ? 'Correct' : 'Incorrect';
-
-    results.push({ playerInputDigits, round: currentRound + 1, generatedSequence, sequenceLength, enteredSequence, elapsedTime, result });
-    
-    if (result === 'Correct') {
-        correctCount++;
-        if (correctCount % 2 === 0) {
-            currentDigitLength++;  // Increase the digit length after every 2 consecutive correct answers
-        }
-    } else {
-        correctCount = 0;  // Reset the correct count on incorrect answer
-    }
-
-    messageArea.textContent = result;
-    displayArea.textContent = '';
-    currentRound++;
-
-    logRoundData(playerInputDigits, generatedSequence, enteredSequence, elapsedTime);
-
-    if (currentRound < maxRounds) {
-        setTimeout(function () {
-            messageArea.textContent = '';
-            startGame();
-        }, 1000);
-    } else {
-        endGame();
-    }
-}
-
-function logRoundData(inputDigits, generatedDigits, subjectResponse, responseTime) {
-    console.log({
-        InputDigits: inputDigits,
-        GeneratedDigits: generatedDigits,
-        SubjectResponse: subjectResponse,
-        ResponseTime: responseTime
-    });
-}
-
 function endGame() {
-    isGameEnded = true; // Set the flag to true to indicate the game has ended
+    isGameEnded = true; 
     document.getElementById('messageArea').textContent = 'המשחק הושלם';
     console.log('המשחק הושלם');
 
-    // Process results
-    for (let i = 0; i < maxRounds; i++) {
-        results.push({
-            participantNumber: playerInputDigits,
-            round: i + 1,
-            generatedSequence: generatedNumbers[i],
-            sequenceLength: stringLength[i],
-            enteredSequence: gameData[i],
-            elapsedTime: timeData[i],
-            result: generatedNumbers[i] === gameData[i] ? 'Correct' : 'Incorrect'
-        });
-    }
+    // Log the results for verification & Actions for ending the game
+    console.log('Storing results:', results);
+    localStorage.setItem('results', JSON.stringify(results));
 
-    // Log the results for verification
-    console.log('Results:', results);
-
-    // Additional actions for ending the game can be added here
+    finishDSExperiment();
 }
 
-// function generateCSVFileAndUpload(gameData, generatedNumbers, timeData, filename) {
-//     let csvContent = "Subject's Code,Generated Digit,Typed Answer,Response Time (ms)\n";
+function finishDSExperiment() {
+    saveDSResults().then(() => {
+        markDSExperimentAsFinished()});
+}
 
-//     for (let i = 0; i < gameData.length; i++) {
-//         csvContent += `${playerInputDigits},${generatedNumbers[i]},${gameData[i]},${timeData[i]}\n`;
-//     }
+async function markDSExperimentAsFinished() {
+    const participantNumber = localStorage.getItem('participantNumber');
+    try {
+        const response = await fetch('/DS_finish_experiment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ participantNumber: participantNumber })
+        });
 
-//     // Convert CSV content to Blob
-//     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const data = await response.json();
+        if (data.status !== 'success') {
+            console.error('Failed to finish experiment');
+            throw new Error('Failed to finish experiment');
+        }
+    } catch (error) {
+        console.error('Error finishing experiment:', error);
+        throw error;  // Ensure the error is caught in the finishDSExperiment function
+    }
+}
 
-//     // Upload Blob to Google Drive
-//     uploadFileToDrive(blob, filename);
-// }
+async function saveDSResults() {
+    const participantNumber = localStorage.getItem('participantNumber');
+    const dsResults = JSON.parse(localStorage.getItem('results')) || [];
+    console.log('dsResults:', dsResults);
+    
+    const payload = {
+        participantNumber: participantNumber,
+        dsResults: dsResults
+    };
+    console.log('Request payload:', payload);
 
-// function uploadFileToDrive(blob, filename) {
-//     const fileMetadata = {
-//         'name': filename,
-//         'mimeType': 'text/csv'
-//     };
-//     const media = {
-//         mimeType: 'text/csv',
-//         body: blob
-//     };
+    try {
+        const response = await fetch('/DS_save_results', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-//     gapi.client.drive.files.create({
-//         resource: fileMetadata,
-//         media: media,
-//         fields: 'id'
-//     }).then(function (response) {
-//         console.log('File ID:', response.result.id);
-//     }).catch(function (error) {
-//         console.error('Error uploading file:', error);
-//     });
-// }
+    console.log('Fetch response:', response);
+
+    const data = await response.json();
+    console.log('Response data:', data);
+
+        if (data.status !== 'success') {
+            console.error('Failed to save results');
+            throw new Error('Failed to save results');
+        }
+    } catch (error) {
+        console.error('Error saving results:', error);  // Added for error handling
+        alert('Failed to save results. Please try again.');  // Added for error handling
+        throw error;  // Re-throw the error to be caught in the finishDSExperiment function
+    }
+}

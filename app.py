@@ -117,10 +117,7 @@ def RTT_check_participant():
                 })
         else:
             print("Incorrect password")
-            return jsonify({
-                "status": "error",
-                "message": "Incorrect password"
-            })
+            return jsonify({"status": "error", "message": "סיסמא שגויה"})
     else:
         print("Participant number not found.")
         return jsonify({
@@ -152,10 +149,11 @@ def append_to_multiple_rtt(data):
 def append_to_ds_results(data):
     body = {'values': data}
     result = sheet.values().append(spreadsheetId=YalabSheet,
-                                   range='DS_Results!A1',
+                                   range='DigitSpan!A1',
                                    valueInputOption='RAW',
                                    insertDataOption='INSERT_ROWS',
                                    body=body).execute()
+    print(f"API Response: {result}")
     return result
 
 
@@ -302,17 +300,27 @@ def DS_save_results():
     participant_number = str(data.get('participantNumber')).strip()
     ds_results = data.get('dsResults') or []
 
+    # Filter out entries that are missing required keys
+    valid_ds_results = [
+        r for r in ds_results
+        if 'generatedSequence' in r and 'sequenceLength' in r
+        and 'enteredSequence' in r and 'elapsedTime' in r
+    ]
+
     # Prepare data for appending
     ds_data = [[
         participant_number, r['round'], r['generatedSequence'],
         r['sequenceLength'], r['enteredSequence'], r['elapsedTime'],
         r['result']
-    ] for r in ds_results]
+    ] for r in valid_ds_results]
+
     print(f"DS data: {ds_data}")  # Added for debugging
 
     # Append results to the respective sheets
+    print("Before appending to DS results")
     if ds_data:
         append_to_ds_results(ds_data)
+        print("After appending to DS results")
 
     # Mark the participant number as used in the Google Sheet
     update_ds_participant_usage(participant_number)
