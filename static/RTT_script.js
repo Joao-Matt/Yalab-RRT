@@ -9,6 +9,8 @@ let startTime;
 let preActivationTime;
 let trialActive = false;
 let isPractice = false;
+const phase1Rounds = 4; // Example value for phase 1
+const phase2Rounds = 6; // Example value for phase 2
 const phase1Element = document.getElementById('phase1-rounds');
 const phase2Element = document.getElementById('phase2-rounds');
 
@@ -91,7 +93,7 @@ function startTrials() {
     if (currentPath.includes('RTT_practice_1') || currentPath.includes('RTT_practice_2')) {
         isPractice = true;
     }
-    maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? phase2Element : phase1Element);
+    maxTrials = isPractice ? practiceMaxTrials : (phase === 'phase2' ? phase2Rounds : phase1Rounds);
     trialActive = false;
     console.log(`Practice set to ${isPractice}`)
 
@@ -139,6 +141,18 @@ function changeColor() {
 
     // Store the squareId globally for use in other functions
     window.currentSquareId = squareId;
+
+    // Display the message for practice mode
+    if (isPractice) {
+        let message = '';
+        if (phase === 'phase1') {
+            message = 'כדי לשנות את הריבוע חזרה לאדום לחצו על מקש הרווח';
+        } else {
+            const keyMap = { 'square1': 'A', 'square2': 'S', 'square3': 'K', 'square4': 'L' };
+            message = `${keyMap[squareId]} 'כדי לשנות את הריבוע חזרה לאדום, לחץ על המקש `;
+        }
+        document.getElementById('message').innerText = message;
+    }
 }
 
 
@@ -170,13 +184,18 @@ function handleReaction(squareId = 'square', pressedKey = 'space') {
     const reactionTime = new Date().getTime() - startTime;
     const correct = checkCorrectKey(squareId, pressedKey);
 
+    // Clear the message for practice mode
+    if (isPractice) {
+        document.getElementById('message').innerText = '';
+    }
+    
     if (!isPractice && phase === 'phase1') {
         resultsSingular.push({ participantNumber, round: trials + 1, trialActive, reactionTime });
     } else if (!isPractice && phase === 'phase2') {
         resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
     }
 
-    console.log(`Reaction: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
+    // console.log(`Reaction: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
     if (phase === 'phase2') {
         document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
     }
