@@ -10,7 +10,13 @@ body {
 }
 
 h1 {
+    font-size: 36px;
     margin-bottom: 20px;
+}
+
+#message {
+    font-size: 28px; /* Makes the message text larger */
+    margin-bottom: 20px; /* Adds space below the message */
 }
 
 /* Styles for input field and button */
