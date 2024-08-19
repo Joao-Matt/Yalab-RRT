@@ -26,6 +26,17 @@
         <p id="message"></p>
     </div>
 
+    <!-- Instructions Screen (initially hidden) -->
+    <div dir="rtl" id="instructionsScreen" style="display: none;">
+        <p style="font-size: 28px;"><strong>הוראות לשלב 1</strong></p>
+        <p style="font-size: 24px;"><strong>מטרה:</strong><br>
+        <p style="font-size: 22px;">במשחק זה, יוצגו בפניך סדרות של מספרים. עליך לזכור ולהקליד את המספרים באותו הסדר.</p>
+        <p style="font-size: 22px;">המשחק יתחיל עם סדרת מספרים קצרה ויתארך בכל שלב במידה ותשיב נכונה.</p>
+        <p style="font-size: 22px;">המשחק נעשה <strong>אך ורק</strong> בערת העכבר ולא יעבוד עם המקשים</p>
+        <p style="font-size: 22px;">לחץ על הכפתור למטה כדי להתחיל את המשחק.</p>
+        <button id="startGameButton" onclick="startGame()">התחל משחק</button>
+    </div>
+
     <!-- Display area for showing random digits -->
     <div id="randomDigits" style="display: none;">
         <p id="digitDisplay"></p>

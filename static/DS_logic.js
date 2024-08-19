@@ -41,10 +41,29 @@ async function checkDSParticipant() {
         localStorage.setItem('participantNumber', participantNumber);
         playerInputDigits = participantNumber
         console.log('1st Participant Number:', playerInputDigits);
-        startGame();  // Start the game directly after successful validation
+        showInstructions();  // Show the instructions screen
     } else {
         document.getElementById('message').innerText = data.message;
     }
+}
+
+function showInstructions() {
+    document.getElementById('inputScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'block';
+}
+
+function startGame() {
+    if (isGameEnded) return; // Prevent starting a new game if the game has ended
+
+    // Hide the instructions screen
+    const instructionsScreen = document.getElementById('instructionsScreen');
+    if (instructionsScreen) {
+        instructionsScreen.style.display = 'none';
+    }
+
+    // Show the game area and start the first round
+    document.getElementById('gameArea').style.display = 'block';
+    nextRound();  // Start the first round
 }
 
 function generateNumber() {
@@ -52,14 +71,6 @@ function generateNumber() {
     let minNumber = Math.pow(10, currentDigitLength - 1);  // Min number for current digit length
     return Math.floor(Math.random() * (maxNumber - minNumber + 1) + minNumber).toString();
 }
-
-function startGame() {
-    if (isGameEnded) return; // Prevent starting a new game if the game has ended
-
-    document.getElementById('inputScreen').style.display = 'none';
-    nextRound();  // Start the first round
-}
-
 
 function nextRound() {
     if (isGameEnded) return;
@@ -162,7 +173,8 @@ function endGame() {
 
 function finishDSExperiment() {
     saveDSResults().then(() => {
-        markDSExperimentAsFinished()});
+        markDSExperimentAsFinished()
+        window.location.href = '/RTT_success';});
 }
 
 async function markDSExperimentAsFinished() {
