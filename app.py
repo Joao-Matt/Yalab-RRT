@@ -220,37 +220,65 @@ def serve_static(filename):
 
 @app.route('/RTT_save_results', methods=['POST'])
 def RTT_save_results():
-    data = request.json
-    print(f"Received data: {data}")  # Added for debugging
-    participant_number = str(data.get('participantNumber')).strip()
-    phase1_results = data.get('phase1Results') or []
-    phase2_results = data.get('phase2Results') or []
+    try:
+        data = request.json
+        if not data:
+            raise ValueError("Invalid input: No data provided")
+        print(f"Received data: {data}")  # Added for debugging
+        participant_number = str(data.get('participantNumber')).strip()
+        phase1_results = data.get('phase1Results') or []
+        phase2_results = data.get('phase2Results') or []
+    
+        # Prepare data for appending
+        singular_data = [[
+            participant_number, r['round'], r['reactionTime'], r['trialActive']
+        ] for r in phase1_results]
+        print(f"Singular data: {singular_data}")  # Added for debugging
+    
+        multiple_data = [[
+            participant_number, r['round'], r['squareId'], r['pressedKey'],
+            r['reactionTime'], r['trialActive'], r['correct']
+        ] for r in phase2_results]
+        print(f"Multiple data: {multiple_data}")  # Added for debugging
+    
+        # Append results to the respective sheets
+        if singular_data:
+            append_to_singular_rtt(singular_data)
+        if multiple_data:
+            append_to_multiple_rtt(multiple_data)
+    
+        # Mark the participant number as used in the Google Sheet
+        update_participant_usage(participant_number)
+    
+        print(
+            f"Participant number {participant_number} marked as used and results saved."
+        )
+        return jsonify({"status": "success"}), 200
+        
+    except ValueError as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400  # Bad Request
 
-    # Prepare data for appending
-    singular_data = [[
-        participant_number, r['round'], r['reactionTime'], r['trialActive']
-    ] for r in phase1_results]
-    print(f"Singular data: {singular_data}")  # Added for debugging
+    except KeyError as e:
+        return jsonify({'status': 'error', 'message': f"Missing key: {str(e)}"}), 422  # Unprocessable Entity
 
-    multiple_data = [[
-        participant_number, r['round'], r['squareId'], r['pressedKey'],
-        r['reactionTime'], r['trialActive'], r['correct']
-    ] for r in phase2_results]
-    print(f"Multiple data: {multiple_data}")  # Added for debugging
+    except TypeError as e:
+        return jsonify({'status': 'error', 'message': f"Type error: {str(e)}"}), 400  # Bad Request
 
-    # Append results to the respective sheets
-    if singular_data:
-        append_to_singular_rtt(singular_data)
-    if multiple_data:
-        append_to_multiple_rtt(multiple_data)
+    except IndexError as e:
+        return jsonify({'status': 'error', 'message': f"Index error: {str(e)}"}), 400  # Bad Request
 
-    # Mark the participant number as used in the Google Sheet
-    update_participant_usage(participant_number)
+    except ZeroDivisionError as e:
+        return jsonify({'status': 'error', 'message': f"Math error: {str(e)}"}), 400  # Bad Request
 
-    print(
-        f"Participant number {participant_number} marked as used and results saved."
-    )
-    return jsonify({"status": "success"})
+    except CustomException as e:
+        return jsonify({'status': 'error', 'message': f"Custom error: {str(e)}"}), 400  # Custom error example
+
+    except Exception as e:
+        # Log the exception for debugging (optional)
+        app.logger.error(f"Unexpected error: {str(e)}")
+
+        # Return a generic error message to the client
+        return jsonify({'status': 'error', 'message': 'Internal Server Error'}), 500  # Internal Server Error
 
 
 @app.route('/RTT_finish_experiment', methods=['POST'])
@@ -261,7 +289,7 @@ def RTT_finish_experiment():
     # Mark the participant number as used in the Google Sheet
     update_participant_usage(participant_number)
 
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success"}), 200
 
 
 def update_participant_usage(participant_number):
@@ -295,40 +323,69 @@ def update_participant_usage(participant_number):
 
 @app.route('/DS_save_results', methods=['POST'])
 def DS_save_results():
-    data = request.json
-    print(f"Received data: {data}")  # Added for debugging
-    participant_number = str(data.get('participantNumber')).strip()
-    ds_results = data.get('dsResults') or []
+    try:
+        data = request.json
+        if not data:
+            raise ValueError("Invalid input: No data provided")
+        print(f"Received data: {data}")  # Added for debugging
+        participant_number = str(data.get('participantNumber')).strip()
+        ds_results = data.get('dsResults') or []
+    
+        # Filter out entries that are missing required keys
+        valid_ds_results = [
+            r for r in ds_results
+            if 'generatedSequence' in r and 'sequenceLength' in r
+            and 'enteredSequence' in r and 'elapsedTime' in r
+        ]
+    
+        # Prepare data for appending
+        ds_data = [[
+            participant_number, r['round'], r['generatedSequence'],
+            r['sequenceLength'], r['enteredSequence'], r['elapsedTime'],
+            r['result']
+        ] for r in valid_ds_results]
+    
+        print(f"DS data: {ds_data}")  # Added for debugging
+    
+        # Append results to the respective sheets
+        print("Before appending to DS results")
+        if ds_data:
+            append_to_ds_results(ds_data)
+            print("After appending to DS results")
+    
+        # Mark the participant number as used in the Google Sheet
+        update_ds_participant_usage(participant_number)
+    
+        print(
+            f"Participant number {participant_number} marked as used and results saved."
+        )
+        return jsonify({"status": "success"}), 200
+    except ValueError as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 400  # Bad Request
 
-    # Filter out entries that are missing required keys
-    valid_ds_results = [
-        r for r in ds_results
-        if 'generatedSequence' in r and 'sequenceLength' in r
-        and 'enteredSequence' in r and 'elapsedTime' in r
-    ]
+    except KeyError as e:
+        return jsonify({'status': 'error', 'message': f"Missing key: {str(e)}"}), 422  # Unprocessable Entity
 
-    # Prepare data for appending
-    ds_data = [[
-        participant_number, r['round'], r['generatedSequence'],
-        r['sequenceLength'], r['enteredSequence'], r['elapsedTime'],
-        r['result']
-    ] for r in valid_ds_results]
+    except TypeError as e:
+        return jsonify({'status': 'error', 'message': f"Type error: {str(e)}"}), 400  # Bad Request
 
-    print(f"DS data: {ds_data}")  # Added for debugging
+    except IndexError as e:
+        return jsonify({'status': 'error', 'message': f"Index error: {str(e)}"}), 400  # Bad Request
 
-    # Append results to the respective sheets
-    print("Before appending to DS results")
-    if ds_data:
-        append_to_ds_results(ds_data)
-        print("After appending to DS results")
+    except ZeroDivisionError as e:
+        return jsonify({'status': 'error', 'message': f"Math error: {str(e)}"}), 400  # Bad Request
 
-    # Mark the participant number as used in the Google Sheet
-    update_ds_participant_usage(participant_number)
+    except CustomException as e:
+        return jsonify({'status': 'error', 'message': f"Custom error: {str(e)}"}), 400  # Custom error example
 
-    print(
-        f"Participant number {participant_number} marked as used and results saved."
-    )
-    return jsonify({"status": "success"})
+    except Exception as e:
+        # Log the exception for debugging (optional)
+        app.logger.error(f"Unexpected error: {str(e)}")
+
+        # Return a generic error message to the client
+        return jsonify({'status': 'error', 'message': 'Internal Server Error'}), 500  # Internal Server Error
+
+
 
 
 @app.route('/DS_finish_experiment', methods=['POST'])
@@ -361,6 +418,41 @@ def update_ds_participant_usage(participant_number):
                           }).execute()
     participants_df.loc[participants_df['Number'] == participant_number,
                         'DS Used'] = 1
+
+
+# Custom exception example
+class CustomException(Exception):
+    pass
+
+# Example of handling a 404 Not Found error globally
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'status': 'error', 'message': 'Resource not found'}), 404
+
+# Example of handling a 500 Internal Server Error globally
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'status': 'error', 'message': 'Something went wrong on our end'}), 500
+
+# Example of handling a 400 Bad Request error globally
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({'status': 'error', 'message': 'Bad request'}), 400
+
+# Example of handling a 403 Forbidden error globally
+@app.errorhandler(403)
+def forbidden(error):
+    return jsonify({'status': 'error', 'message': 'Forbidden'}), 403
+
+# Example of handling a 405 Method Not Allowed error globally
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({'status': 'error', 'message': 'Method Not Allowed'}), 405
+
+# Example of handling a 422 Unprocessable Entity error globally
+@app.errorhandler(422)
+def unprocessable_entity(error):
+    return jsonify({'status': 'error', 'message': 'Unprocessable Entity'}), 422
 
 
 if __name__ == '__main__':
