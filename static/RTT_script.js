@@ -351,14 +351,20 @@ async function saveResults() {
             })
         });
 
-        const data = await response.json();
-        if (data.status !== 'success') {
-            console.error('Failed to save results');
-            throw new Error('Failed to save results');
-        }
+        const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.status !== 'success') {
+                        console.error('Failed to save results');
+                        throw new Error('Failed to save results');
+                    }
+                } else {
+                    console.error('Unexpected response format:', contentType);
+                    throw new Error('Server returned non-JSON response');
+                }
     } catch (error) {
-        console.error('Error saving results:', error);  // Added for error handling
-        alert('Failed to save results. Please try again.');  // Added for error handling
-        throw error;  // Re-throw the error to be caught in the finishExperiment function
+        console.error('Error saving results:', error);
+        alert('Failed to save results. Please try again.');
+        throw error;
     }
 }
