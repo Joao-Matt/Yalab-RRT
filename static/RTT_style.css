@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
+    background-color: rgba(76, 175, 80, 0.15); /* Adjust the alpha value to make it more faded */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -8,6 +8,17 @@ body {
     height: 100vh;
     margin: 0;
 }
+
+header {
+  background-color: rgba(76, 175, 80, 0.2); /* Adjust the alpha value to make it more faded */
+  color: black;
+  padding: 20px 0;
+  margin: 0 auto 40px auto;  /* Center the header with margins on all sides */
+  width: 80%;                /* Set the width of the header */
+  max-width: 1200px;         /* Limit the maximum width */
+  border-radius: 10px;       /* Optional: Add rounded corners */
+}
+
 
 h1 {
     font-size: 36px;

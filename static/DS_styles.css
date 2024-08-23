@@ -18,6 +18,13 @@ html {
     /* Prevent scrolling */
 }
 
+header {
+  background-color: rgba(76, 175, 80, 0.2); /* Adjust the alpha value to make it more faded */
+  color: black;
+  padding: 20px 0;
+  margin-bottom: 40px;
+}
+
 /* Styles for input field and button */
 #participantNumber {
     font-size: 1.5em;
