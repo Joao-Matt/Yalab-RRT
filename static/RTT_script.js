@@ -195,9 +195,9 @@ function handleReaction(squareId = 'square', pressedKey = 'space') {
         resultsMultiple.push({ participantNumber, round: trials + 1, squareId, pressedKey, reactionTime, trialActive, correct });
     }
 
-    // console.log(`Reaction: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
+    console.log(`Reaction: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
     if (phase === 'phase2') {
-        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
+        // document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, ${correct ? 'Correct' : 'Wrong'}`;
     }
 
     trials++;
@@ -220,9 +220,9 @@ function handleInactiveTrial(squareId = 'square', pressedKey = 'space') {
     }
 
     console.log(`Inactive Trial: squareId=${squareId}, pressedKey=${pressedKey}, correct=${correct}`);
-    if (phase === 'phase2') {
-        document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, Wrong`;
-    }
+    // if (phase === 'phase2') {
+    //     document.getElementById('message').innerText = `Reaction time: ${reactionTime} ms, Wrong`;
+    // }
 
     trials++;
     trialActive = false;
@@ -293,7 +293,7 @@ function checkCorrectKey(squareId, pressedKey) {
         return pressedKey === 'space';
     } else {
         const validKeys = { 'square1': 'a', 'square2': 's', 'square3': 'k', 'square4': 'l' };
-        console.log(`Checking key: squareId=${squareId}, pressedKey=${pressedKey}, validKey=${validKeys[squareId]}`);
+        // console.log(`Checking key: squareId=${squareId}, pressedKey=${pressedKey}, validKey=${validKeys[squareId]}`);
         return validKeys[squareId] === pressedKey;
     }
 }
