@@ -12,11 +12,12 @@
     <header>
         <h1>YALAB-GameShow</h1>
     </header>
-    <main>
-        <p>Welcome to YALAB Web App</p>
+    <main dir="rtl">
+        <p>ברוכים הבאים</p>
         <div class="button-container">
             <button onclick="window.location.href='/RTT_index'">זמן תגובה</button>
             <button onclick="window.location.href='/DS_index'">משחק זיכרון</button>
+            <button onclick="window.location.href='/stroop_index'">מבחן סטרופ</button>
         </div>
         <script src="{{ url_for('static', filename='scripts.js') }}"></script>
     </main>

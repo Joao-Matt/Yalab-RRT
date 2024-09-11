@@ -1,7 +1,7 @@
-from flask import Blueprint, Flask, jsonify, request, render_template, app
-import flask
+from flask import Blueprint, Flask, jsonify, request, render_template
 from globals import load_participants_from_sheet, sheet, YalabSheet
 
+currentApp = Flask(__name__)
 participants_df = load_participants_from_sheet()
 
 # Create a Blueprint for DS-related routes
@@ -140,15 +140,15 @@ def DS_save_results():
     #         'message': f"Custom error: {str(e)}"
     #     }), 400  # Custom error example
 
-    # except Exception as e:
-    #     # Log the exception for debugging (optional)
-    #     app.logger.error(f"Unexpected error: {str(e)}")
+    except Exception as e:
+        # Log the exception for debugging (optional)
+        currentApp.logger.error(f"Unexpected error: {str(e)}")
 
-    #     # Return a generic error message to the client
-    #     return jsonify({
-    #         'status': 'error',
-    #         'message': 'Internal Server Error'
-    #     }), 500  # Internal Server Error
+        # Return a generic error message to the client
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal Server Error'
+        }), 500  # Internal Server Error
 
 
 @ds_bp.route('/DS_finish_experiment', methods=['POST'])

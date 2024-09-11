@@ -2,6 +2,7 @@ from flask import Flask, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from DS import ds_bp
 from RTT import rtt_bp
+from Stroop import stroop_bp
 from globals import load_participants_from_sheet
 
 participants_df = load_participants_from_sheet()
@@ -16,6 +17,7 @@ CORS(app)
 # Register blueprints for DS and RTT
 app.register_blueprint(ds_bp)
 app.register_blueprint(rtt_bp)
+app.register_blueprint(stroop_bp)
 
 
 @app.route('/')

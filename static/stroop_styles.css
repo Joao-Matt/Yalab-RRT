@@ -1,0 +1,64 @@
+/* Reset default margins, paddings, and box-sizing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Ensure body and html fill the entire viewport */
+body,
+html {
+    direction: rtl;  /* Right-to-left text direction */
+    text-align: right;  /* Align text to the right */
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+/* Styles for input field and button */
+#participantNumber,
+#password {
+    font-size: 1.5em;
+    padding: 10px;
+    width: 300px;
+    margin-bottom: 15px;
+}
+
+#checkButton {
+    font-size: 1.5em;
+    padding: 10px 20px;
+    margin-top: 10px;
+}
+
+/* Styles for the welcome screen */
+#welcomeScreen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    height: 100vh;
+    font-size: 24px;
+}
+
+/* Styles for the start button */
+#startButton {
+    padding: 10px 20px;
+    font-size: 20px;
+    margin-top: 20px;
+    cursor: pointer;
+}
+
+#trainingScreen {
+    text-align: center;
+}
+
+#testScreen {
+    text-align: center;
+    font-size: 48px;
+}

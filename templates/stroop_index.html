@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stroop Test</title>
+    <link rel="stylesheet" href="{{ url_for('serve_static', filename='stroop_styles.css') }}">
+</head>
+<body>
+    <!-- Hidden input for participant number -->
+    <input type="hidden" id="participantNumber" value="{{ session['participant_number'] }}">
+
+    <!-- Instructions Screen -->
+    <div id="instructionsScreen">
+        <h1>הוראות למבחן סטרופ</h1>
+        <p>כאן יבואו ההוראות למבחן</p>
+        <button onclick="startTraining()">התחל אימון</button>
+    </div>
+
+    <!-- Training Screen -->
+    <div id="trainingScreen" style="display:none;">
+        <h2>שלב אימון</h2>
+        <p id="trainingMessage"></p>
+        <p id="wordDisplay" style="font-size:48px;"></p>
+        <button onclick="nextTrainingWord()">מילה הבאה</button>
+    </div>
+
+    <!-- Test Screen -->
+    <div id="testScreen" style="display:none;">
+        <h2>מבחן סטרופ</h2>
+        <p id="wordDisplayTest" style="font-size:48px;"></p>
+        <p>לחץ על המקשים המתאימים לצבע המילה</p>
+    </div>
+
+    <script src="{{ url_for('serve_static', filename='stroop_logic.js') }}"></script>
+</body>
+</html>
