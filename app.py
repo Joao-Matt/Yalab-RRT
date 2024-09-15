@@ -19,7 +19,6 @@ app.register_blueprint(ds_bp)
 app.register_blueprint(rtt_bp)
 app.register_blueprint(stroop_bp)
 
-
 @app.route('/')
 def main_index():
     return render_template('index.html')  # Serve the main index HTML file

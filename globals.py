@@ -25,7 +25,7 @@ sheet = service.spreadsheets()
 # Function to load participants data
 def load_participants_from_sheet():
     result = sheet.values().get(spreadsheetId=YalabSheet,
-                                range='participants!A:E').execute()
+                                range='participants!A:F').execute()
     values = result.get('values', [])
     participants_df = pd.DataFrame(values[1:], columns=values[0])
     participants_df['Number'] = participants_df['Number'].astype(str)
@@ -34,7 +34,5 @@ def load_participants_from_sheet():
     participants_df['Multiple RTT Used'] = participants_df[
         'Multiple RTT Used'].astype(int)
     participants_df['DS Used'] = participants_df['DS Used'].astype(int)
+    participants_df['Stroop Used'] = participants_df['Stroop Used'].astype(int)
     return participants_df
-
-
-

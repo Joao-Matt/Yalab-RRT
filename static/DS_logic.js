@@ -2,6 +2,9 @@ let playerInputDigits = ''; // Variable to store the player's entered digits
 const maxRounds = 3; // Define the maximum number of rounds, in the future will be 20
 let currentDigitLength = 2;  // Start with 2 digits
 let generatedSequence = ''; // Global variable to store the generated sequence
+let isTraining = true; // Flag to indicate if we're in the training phase
+let trainingVar = 2; // Variable to control the number of training trials
+let currentTrainingRound = 0; // Track the current training round
 let startTime; // Timer start time for responses
 let currentRound = 0; // Initialize the current round counter
 let gameData = []; // Array to hold each round's data
@@ -27,6 +30,11 @@ function showInputScreen() {
     document.getElementById('inputScreen').style.display = 'block';
 }
 
+function showInstructions() {
+    document.getElementById('inputScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'block';
+}
+
 async function checkDSParticipant() {
     const participantNumber = document.getElementById('participantNumber').value;
     const password = document.getElementById('password').value;
@@ -45,11 +53,6 @@ async function checkDSParticipant() {
     } else {
         document.getElementById('message').innerText = data.message;
     }
-}
-
-function showInstructions() {
-    document.getElementById('inputScreen').style.display = 'none';
-    document.getElementById('instructionsScreen').style.display = 'block';
 }
 
 function startGame() {
@@ -72,78 +75,128 @@ function generateNumber() {
     return Math.floor(Math.random() * (maxNumber - minNumber + 1) + minNumber).toString();
 }
 
+
+function endTrainingMsg() {
+    // Hide any previous screens
+    document.getElementById('gameArea').style.display = 'none';
+
+    // Show the "End of Training" message
+    document.getElementById('endTrainingMessage').style.display = 'block';
+
+    setTimeout(function () {
+        // After 3 seconds, hide the "End of Training" message
+        document.getElementById('endTrainingMessage').style.display = 'none';
+
+        // Now we switch to game mode and start the game
+        currentDigitLength = 2;  // Reset digit length for the actual game
+        isTraining = false;  // Switch to game mode
+
+        nextRound();  // Start the game after the training phase
+    }, 3000);  // Show message for 3 seconds
+}
+
+
+
 function nextRound() {
     if (isGameEnded) return;
 
-    if (currentRound < maxRounds) {
-        generatedSequence = generateNumber();
-        document.getElementById('digitDisplay').textContent = generatedSequence;
-        document.getElementById('gameArea').style.display = 'none';
-        document.getElementById('messageArea').textContent = '';
-        document.getElementById('randomDigits').style.display = 'block';
-
-        // Store generated sequence and current string length
-        generatedNumbers.push(generatedSequence);
-        stringLength.push(currentDigitLength);
-
-        setTimeout(function () {
-            document.getElementById('randomDigits').style.display = 'none';
-            document.getElementById('gameArea').style.display = 'flex';
-            startTime = performance.now();
-        }, 2000);
-    } else {
-        endGame();
+    if (isTraining && currentTrainingRound === trainingVar) {
+        // End of training, show end training message
+        endTrainingMsg();
     }
-}
+    
+    // Training mode
+    if (isTraining) {
+        if (currentTrainingRound < trainingVar) {
+            generatedSequence = generateNumber();
+            if (generatedSequence === null) return;  // If we reached the end of training
 
-function enterPressed() {
-    const endTime = performance.now();
-    const elapsedTime = endTime - startTime;
-    const displayArea = document.getElementById('displayArea');
-    const enteredSequence = displayArea.textContent;
-    const messageArea = document.getElementById('messageArea');
-    const result = enteredSequence === generatedSequence ? 'Correct' : 'Incorrect';
+            document.getElementById('digitDisplay').textContent = generatedSequence;
+            document.getElementById('randomDigits').style.display = 'block';
+            document.getElementById('gameArea').style.display = 'none';  // Hide keypad during number display
 
-    // Store the entered sequence and elapsed time
-    gameData.push(enteredSequence);
-    timeData.push(elapsedTime);
-
-    // Ensure no duplicate entries
-    results.push({ 
-        playerInputDigits, 
-        round: currentRound + 1, 
-        generatedSequence, 
-        sequenceLength: currentDigitLength, 
-        enteredSequence, 
-        elapsedTime, 
-        result 
-    });
-
-    // Logic to handle correct and incorrect answers
-    if (result === 'Correct') {
-        correctCount++;
-        messageArea.textContent = '!נכון'
-        if (correctCount % 2 === 0) {
-            currentDigitLength++;  // Increase the digit length after every 2 consecutive correct answers
+            currentTrainingRound++;
+         
+            // Show the random number for 2 seconds, then switch to keypad for input
+            setTimeout(function () {
+                document.getElementById('randomDigits').style.display = 'none';  // Hide the number
+                document.getElementById('gameArea').style.display = 'flex';  // Show the keypad
+                startTime = performance.now();  // Start timing input
+            }, 2000);
         }
     } else {
-        messageArea.textContent = '!טעות'
-        correctCount = 0;  // Reset the correct count on incorrect answer
-    }
+        // Game mode
+        if (currentRound <= maxRounds) {
+            generatedSequence = generateNumber();
+            document.getElementById('digitDisplay').textContent = generatedSequence;
+            document.getElementById('randomDigits').style.display = 'block';
+            document.getElementById('gameArea').style.display = 'none';  // Hide keypad during number display
 
-    // Update the UI
-    displayArea.textContent = '';
-    currentRound++;
+            generatedNumbers.push(generatedSequence);
+            stringLength.push(currentDigitLength);
 
-    if (currentRound < maxRounds) {
-        setTimeout(function () {
-            messageArea.textContent = '';
-            nextRound();
-        }, 1000);
-    } else {
-        endGame();
+            // Show the random number for 2 seconds, then switch to keypad for input
+            setTimeout(function () {
+                document.getElementById('randomDigits').style.display = 'none';  // Hide the number
+                document.getElementById('gameArea').style.display = 'flex';  // Show the keypad
+                startTime = performance.now();  // Start timing input
+            }, 2000);
+
+            currentRound++;
+        } else {
+            endGame();  // End game if max rounds are completed
+        }
     }
 }
+
+    function enterPressed() {
+        const endTime = performance.now();
+        const elapsedTime = endTime - startTime;
+        const displayArea = document.getElementById('displayArea');
+        const enteredSequence = displayArea.textContent;
+        const messageArea = document.getElementById('messageArea');
+        const result = enteredSequence === generatedSequence ? 'Correct' : 'Incorrect';
+
+        // Logic to handle correct and incorrect answers
+        if (result === 'Correct') {
+            messageArea.textContent = '!נכון';
+            correctCount++;
+            if (correctCount % 2 === 0) {
+                currentDigitLength++;  // Increase the digit length after every 2 consecutive correct answers
+            }
+        } else {
+            messageArea.textContent = '!טעות';
+            correctCount = 0;  // Reset the correct count on incorrect answer
+        }
+
+        displayArea.textContent = '';  // Clear the display for the next round
+
+        if (!isTraining) {
+            // Store the entered sequence and elapsed time only if not in training mode
+            gameData.push(enteredSequence);
+            timeData.push(elapsedTime);
+
+            // Store results
+            results.push({
+                playerInputDigits,
+                round: currentRound,
+                generatedSequence,
+                sequenceLength: currentDigitLength,
+                enteredSequence,
+                elapsedTime,
+                result
+            });
+        } 
+        
+        if (currentRound < maxRounds || (isTraining && currentTrainingRound < trainingVar)) {
+            setTimeout(function () {
+                messageArea.textContent = '';
+                nextRound();
+            }, 1000);
+        } else {
+            endGame();  // End the game when rounds are completed
+        }
+    }
 
 function keyPressed(key) {
     const displayArea = document.getElementById('displayArea');
